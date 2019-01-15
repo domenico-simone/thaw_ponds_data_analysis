@@ -1,7 +1,7 @@
 # Thaw ponds data analysis
 <!-- TOC START min:1 max:3 link:true update:true -->
 - [Thaw ponds data analysis](#thaw-ponds-data-analysis)
-        - [Parameters used in this protocol (edit this!)](#parameters-used-in-this-protocol-edit-this)
+    - [Parameters used in this protocol (edit this!)](#parameters-used-in-this-protocol-edit-this)
     - [Download data](#download-data)
     - [Install MetaDomain](#install-metadomain)
     - [Quality trimming](#quality-trimming)
@@ -19,11 +19,15 @@
 <!-- TOC END -->
 
 
-### Parameters used in this protocol (edit this!)
+## Parameters used in this protocol (edit this!)
+
+**Run before anytime you run the protocol.**
 
 ```bash
 export snicProj=
 export wdir=
+export PATH=${wdir}/scripts:$PATH
+export PATH=${wdir}/ext_utils/Metadomain:$PATH
 ```
 ## Download data
 
