@@ -1,24 +1,24 @@
-# Thaw ponds data analysis
-<!-- TOC START min:1 max:3 link:true update:true -->
-- [Thaw ponds data analysis](#thaw-ponds-data-analysis)
-    - [Parameters used in this protocol (edit this!)](#parameters-used-in-this-protocol-edit-this)
-    - [Download data](#download-data)
-    - [Install MetaDomain](#install-metadomain)
-    - [Quality trimming](#quality-trimming)
-    - [Co-assembly of all samples](#co-assembly-of-all-samples)
-    - [Abundance of HMM families in read datasets](#abundance-of-hmm-families-in-read-datasets)
-        - [Run MetaDomain](#run-metadomain)
-    - [Abundance of HMM families on thaw ponds contigs](#abundance-of-hmm-families-on-thaw-ponds-contigs)
-        - [Find CDS with Prodigal](#find-cds-with-prodigal)
-        - [Annotate CDS against PFAM](#annotate-cds-against-pfam)
-        - [Re-map hmmscan results on contig annotations](#re-map-hmmscan-results-on-contig-annotations)
-        - [Generate bowtie2 dbs for co-assembly of contigs](#generate-bowtie2-dbs-for-co-assembly-of-contigs)
-        - [Map reads to contigs](#map-reads-to-contigs)
-        - [Get read counts](#get-read-counts)
+# Carbon degradation in thaw ponds: data analysis
+<!-- TOC START min:2 max:3 link:true update:true -->
+- [Parameters used in this protocol (edit this!)](#parameters-used-in-this-protocol-edit-this)
+- [Download data](#download-data)
+- [Install MetaDomain](#install-metadomain)
+- [Quality trimming](#quality-trimming)
+- [Co-assembly of all samples](#co-assembly-of-all-samples)
+- [Abundance of HMM families in read datasets](#abundance-of-hmm-families-in-read-datasets)
+    - [Run MetaDomain](#run-metadomain)
+- [Abundance of HMM families on thaw ponds contigs](#abundance-of-hmm-families-on-thaw-ponds-contigs)
+    - [Find CDS with Prodigal](#find-cds-with-prodigal)
+    - [Annotate CDS against PFAM](#annotate-cds-against-pfam)
+    - [Re-map hmmscan results on contig annotations](#re-map-hmmscan-results-on-contig-annotations)
+    - [Generate bowtie2 dbs for co-assembly of contigs](#generate-bowtie2-dbs-for-co-assembly-of-contigs)
+    - [Map reads to contigs](#map-reads-to-contigs)
+    - [Get read counts](#get-read-counts)
 
 <!-- TOC END -->
 
-
+Paper results have been produced with the commands in this document, with the exception of differential abundance analyses which have been done with the commands in the Rmd file thaw_ponds_DA.Rmd.
+ 
 ## Parameters used in this protocol (edit this!)
 
 **Run before anytime you run the protocol.**
@@ -161,6 +161,8 @@ for i in (1, 2):
                 outhandle1 = open('%s/%s.%d.%d.fasta' % (inDir, sample_name, chunks, i), 'w')
 " ${sample} ${inDir} ${outDir} ${dataDir}> ${logDir}/${sample}_chunk_MetaDomain_submission.log; done
 ```
+
+MetaDomain results will be processed in the Rmd file thaw_ponds_DA.Rmd.
 
 ## Abundance of HMM families on thaw ponds contigs
 
