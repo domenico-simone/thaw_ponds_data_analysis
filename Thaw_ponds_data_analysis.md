@@ -87,7 +87,71 @@ EOF
 
 ## Abundance of HMM families in read datasets
 
-...
+```bash
+cd ${wDir}
+# create tmp directory
+export inDir=${wDir}/filtered_reads
+export dataDir=${wDir}/pfam_db_2018
+export outDir=${wDir}/metadomain_1M
+export logDir=${wDir}/logs
+mkdir -p ${inDir}
+mkdir -p ${outDir}
+mkdir -p ${logDir}
+for sample in $(cat sample_list); do echo ${sample} ; python -c "
+import sys, os
+from itertools import izip
+
+# def sendBatchJob(sample_name, chunks, wDir='.', outDir='./pfam_reads_chunks_all', logDir='./logs'):
+#     os.system('sbatch -J pfam_reads_MetaDomain_%s_%d -o %s/pfam_reads_MetaDomain_%s_%d.out -e %s/pfam_reads_MetaDomain_%s_%d.err \
+#         ShortPairBatch.sh %s %s %s %s %s' % (sample_name, chunks, logDir,      sample_name, chunks, logDir, sample_name, chunks, \
+#             sample_name, chunks, wDir, outDir, inDir))
+
+def runMetaDomain(sample_name, chunks, outDir='./pfam_reads_chunks_MetaDomain', logDir='./logs', dataDir='./pfam_db_2018', direction=1, inDir='./filtered_reads'):
+    #outDir=
+    os.system('sbatch -J pfam_reads_MetaDomain_%s_%d -o %s/pfam_reads_MetaDomain_%s_%d.out -e %s/pfam_reads_MetaDomain_%s_%d.err \
+        run_MetaDomain.sh %s %s %s %s %s %s' % (sample_name, chunks, logDir, sample_name, chunks, logDir, sample_name, chunks, \
+            outDir, sample_name, chunks, direction, dataDir, inDir))
+
+sample_name = sys.argv[1]
+inDir = sys.argv[2]
+outDir = sys.argv[3]
+dataDir = sys.argv[4]
+
+for i in (1, 2):
+    print sample_name, i
+    S1 = open('%s/%s_R%d_001.qc.fastq.gz' % (inDir, sample_name, i), 'r')
+    #S2 = open('%s/%s_R2_001.qc.fastq.gz' % (inDir, sample_name), 'r')
+    chunks = 0
+    print 'chunk number: %d' % chunks
+    outhandle1 = open('%s/%s.%d.%d.fasta' % (inDir, sample_name, chunks, i), 'w')
+    #outhandle2 = open('%s/%s.%d.2.fasta' % (inDir, sample_name, chunks), 'w')
+    c = 1
+    n_seqs = 1
+    for l1 in S1:
+    #for l1, l2 in izip(S1, S2):
+        if c == 1:
+            l1 = l1.split()
+            #l2 = l2.split()
+            outhandle1.write('>%s.1\n' % l1[0][1:])
+            #outhandle2.write('>%s.2\n' % l2[0][1:])
+        elif c == 2:
+            outhandle1.write(l1)
+            #outhandle2.write(l2)
+        c += 1
+        if c == 4:
+            c = 0
+            n_seqs += 1
+            if n_seqs%500000 == 0:
+                print n_seqs
+                outhandle1.close()
+                #outhandle2.close()
+                runMetaDomain(sample_name, chunks, outDir=outDir, logDir='./logs', dataDir=dataDir, inDir=inDir, direction=i)
+                chunks += 1
+                print 'chunk number: %d' % chunks
+                outhandle1 = open('%s/%s.%d.%d.fasta' % (inDir, sample_name, chunks, i), 'w')
+                #outhandle2 = open('%s/%s.%d.2.fasta' % (inDir, sample_name, chunks), 'w')
+" ${sample} ${inDir} ${outDir} ${dataDir}> ${logDir}/${sample}_chunk_MetaDomain_submission.log; done
+```
 
 ## Abundance of HMM families on thaw ponds contigs
 
