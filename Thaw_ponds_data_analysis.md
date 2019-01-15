@@ -76,8 +76,8 @@ module load sickle
 
 sample=$(sed -n "$SLURM_ARRAY_TASK_ID"p $sampleList)
 
-sickle pe -f ${sample}_R1_001.fastq.gz \
--r ${sample}_R2_001.fastq.gz \
+sickle pe -f ${wdir}/data/${sample}_R1_001.fastq.gz \
+-r ${wdir}/data/${sample}_R2_001.fastq.gz \
 -t sanger \
 -o ${wdir}/reads_filtered/trimmed_${sample}_R1_001.fastq \
 -p ${wdir}/reads_filtered/trimmed_${sample}_R2_001.fastq \
@@ -139,19 +139,15 @@ for i in (1, 2):
     chunks = 0
     print 'chunk number: %d' % chunks
     outhandle1 = open('%s/%s.%d.%d.fasta' % (inDir, sample_name, chunks, i), 'w')
-    #outhandle2 = open('%s/%s.%d.2.fasta' % (inDir, sample_name, chunks), 'w')
     c = 1
     n_seqs = 1
     for l1 in S1:
-    #for l1, l2 in izip(S1, S2):
         if c == 1:
             l1 = l1.split()
-            #l2 = l2.split()
             outhandle1.write('>%s.1\n' % l1[0][1:])
             #outhandle2.write('>%s.2\n' % l2[0][1:])
         elif c == 2:
             outhandle1.write(l1)
-            #outhandle2.write(l2)
         c += 1
         if c == 4:
             c = 0
@@ -159,12 +155,10 @@ for i in (1, 2):
             if n_seqs%500000 == 0:
                 print n_seqs
                 outhandle1.close()
-                #outhandle2.close()
                 runMetaDomain(sample_name, chunks, outDir=outDir, logDir='./logs', dataDir=dataDir, inDir=inDir, direction=i)
                 chunks += 1
                 print 'chunk number: %d' % chunks
                 outhandle1 = open('%s/%s.%d.%d.fasta' % (inDir, sample_name, chunks, i), 'w')
-                #outhandle2 = open('%s/%s.%d.2.fasta' % (inDir, sample_name, chunks), 'w')
 " ${sample} ${inDir} ${outDir} ${dataDir}> ${logDir}/${sample}_chunk_MetaDomain_submission.log; done
 ```
 
