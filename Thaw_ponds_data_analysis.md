@@ -110,7 +110,7 @@ To optimize running time, read datasets are divided in chunks of 1 million reads
 ```bash
 cd ${wdir}
 # create tmp directory
-#export inDir=${wdir}/filtered_reads
+export inDir=${wdir}/filtered_reads
 export dataDir=${wdir}/data
 export outDir=${wdir}/metadomain_1M
 export logDir=${wdir}/logs
@@ -124,7 +124,7 @@ from itertools import izip
 def runMetaDomain(sample_name, chunks, outDir='./pfam_reads_chunks_MetaDomain', logDir='./logs', dataDir='./pfam_db_2018', direction=1, inDir='./filtered_reads'):
     #outDir=
     os.system('sbatch -J pfam_reads_MetaDomain_%s_%d -o %s/pfam_reads_MetaDomain_%s_%d.out -e %s/pfam_reads_MetaDomain_%s_%d.err \
-        run_MetaDomain.sh %s %s %s %s %s %s' % (sample_name, chunks, logDir, sample_name, chunks, logDir, sample_name, chunks, \
+        scripts/run_MetaDomain.sh %s %s %s %s %s %s' % (sample_name, chunks, logDir, sample_name, chunks, logDir, sample_name, chunks, \
             outDir, sample_name, chunks, direction, dataDir, inDir))
 
 sample_name = sys.argv[1]
@@ -134,8 +134,8 @@ dataDir = sys.argv[4]
 
 for i in (1, 2):
     print sample_name, i
-    S1 = open('%s/%s_R%d_001.qc.fastq.gz' % (inDir, sample_name, i), 'r')
-    #S2 = open('%s/%s_R2_001.qc.fastq.gz' % (inDir, sample_name), 'r')
+    S1 = open('%s/trimmed_%s_R%d_001.fastq' % (inDir, sample_name, i), 'r')
+    #S1 = open('%s/%s_R%d_001.qc.fastq.gz' % (inDir, sample_name, i), 'r')
     chunks = 0
     print 'chunk number: %d' % chunks
     outhandle1 = open('%s/%s.%d.%d.fasta' % (inDir, sample_name, chunks, i), 'w')
