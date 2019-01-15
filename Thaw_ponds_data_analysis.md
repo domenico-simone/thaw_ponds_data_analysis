@@ -3,9 +3,11 @@
 - [Thaw ponds data analysis](#thaw-ponds-data-analysis)
         - [Parameters used in this protocol (edit this!)](#parameters-used-in-this-protocol-edit-this)
     - [Download data](#download-data)
+    - [Install MetaDomain](#install-metadomain)
     - [Quality trimming](#quality-trimming)
     - [Co-assembly of all samples](#co-assembly-of-all-samples)
     - [Abundance of HMM families in read datasets](#abundance-of-hmm-families-in-read-datasets)
+        - [Run MetaDomain](#run-metadomain)
     - [Abundance of HMM families on thaw ponds contigs](#abundance-of-hmm-families-on-thaw-ponds-contigs)
         - [Find CDS with Prodigal](#find-cds-with-prodigal)
         - [Annotate CDS against PFAM](#annotate-cds-against-pfam)
@@ -37,7 +39,17 @@ cd ..
 
 mkdir -p scripts && cd scripts
 wget https://export.uppmax.uu.se/uppstore2018171/splitSeqFile.py && chmod u+x splitSeqFile.py
+cd ..
+```
 
+## Install MetaDomain
+
+```bash
+cd $wdir
+mkdir -p ext_utils && cd ext_utils
+
+curl -L https://sourceforge.net/projects/metadomain/files/MetaDomain.tar.gz/download > metadomain.tar.gz
+tar -xvzf metadomain.tar.gz && cd MetaDomain && make
 ```
 
 ## Quality trimming
@@ -87,24 +99,23 @@ EOF
 
 ## Abundance of HMM families in read datasets
 
+### Run MetaDomain
+
+To optimize running time, read datasets are divided in chunks of 1 million reads each.
+
 ```bash
-cd ${wDir}
+cd ${wdir}
 # create tmp directory
-export inDir=${wDir}/filtered_reads
-export dataDir=${wDir}/pfam_db_2018
-export outDir=${wDir}/metadomain_1M
-export logDir=${wDir}/logs
-mkdir -p ${inDir}
+#export inDir=${wdir}/filtered_reads
+export dataDir=${wdir}/data
+export outDir=${wdir}/metadomain_1M
+export logDir=${wdir}/logs
+#mkdir -p ${inDir}
 mkdir -p ${outDir}
 mkdir -p ${logDir}
-for sample in $(cat sample_list); do echo ${sample} ; python -c "
+for sample in $(cat $dataDir/sampleList); do echo ${sample} ; python -c "
 import sys, os
 from itertools import izip
-
-# def sendBatchJob(sample_name, chunks, wDir='.', outDir='./pfam_reads_chunks_all', logDir='./logs'):
-#     os.system('sbatch -J pfam_reads_MetaDomain_%s_%d -o %s/pfam_reads_MetaDomain_%s_%d.out -e %s/pfam_reads_MetaDomain_%s_%d.err \
-#         ShortPairBatch.sh %s %s %s %s %s' % (sample_name, chunks, logDir,      sample_name, chunks, logDir, sample_name, chunks, \
-#             sample_name, chunks, wDir, outDir, inDir))
 
 def runMetaDomain(sample_name, chunks, outDir='./pfam_reads_chunks_MetaDomain', logDir='./logs', dataDir='./pfam_db_2018', direction=1, inDir='./filtered_reads'):
     #outDir=
