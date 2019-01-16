@@ -176,6 +176,9 @@ DESeq2csv <- function(DESeq2.data, file="DESeq2_data.csv"){
 
 ```{r}
 
+## Create results dir
+dir.create("results", showWarnings = FALSE)
+
 # Read sample metadata and join it with table with dataset size:
 
 metadata <- read_csv("data/metadata.csv")
@@ -217,11 +220,14 @@ rownames(all.final.matrix) <- rownames.all.final.matrix
 
 ### Overview of read mappings on PFAM HMMs of interest
 
+Reported in file `results/read_mapping_carbon_HMM.csv`.
+
 ```{r, collapse=FALSE, include=TRUE}
 data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
   left_join(metadata.dataset_size) %>%
   mutate("total_mapped_reads (%)"=total_mapped_reads*100/total_reads) %>%
-  datatable(rownames = FALSE, filter = "top", options = list(pageLength = 30))
+  write.table(file="results/read_mapping_carbon_HMM.csv", quote=FALSE, sep="\t", row.names = FALSE)
+  #datatable(rownames = FALSE, filter = "top", options = list(pageLength = 30))
 ```
 
 ### NMDS on normalized data
@@ -312,24 +318,24 @@ res.emerge_medium <- results(dds, contrast = c("age", "emerge", "medium"))
 
 ```{r}
 plotMA.significant(res.old_emerge, cex = 0.6, main="DE analysis - MA plot: epilimnion, old vs emerging")
-DESeq2datatable(res.old_emerge)
-DESeq2csv(res.old_emerge, file="DESeq2.epi.old_vs_emerging.csv")
+#DESeq2datatable(res.old_emerge)
+DESeq2csv(res.old_emerge, file="results/DESeq2.epi.old_vs_emerging.csv")
 ```
 
 #### Old vs medium
 
 ```{r}
 plotMA.significant(res.old_medium, cex = 0.6, main="DE analysis - MA plot: epilimnion, old vs medium")
-DESeq2datatable(res.old_medium)
-DESeq2csv(res.old_medium, file="DESeq2.epi.old_vs_medium.csv")
+#DESeq2datatable(res.old_medium)
+DESeq2csv(res.old_medium, file="results/DESeq2.epi.old_vs_medium.csv")
 ```
 
 #### Emerging vs medium
 
 ```{r}
 plotMA.significant(res.emerge_medium, cex = 0.6, main="DE analysis - MA plot: epilimnion, emerging vs medium")
-DESeq2datatable(res.emerge_medium)
-DESeq2csv(res.emerge_medium, file="DESeq2.epi.emerging_vs_medium.csv")
+#DESeq2datatable(res.emerge_medium)
+DESeq2csv(res.emerge_medium, file="results/DESeq2.epi.emerging_vs_medium.csv")
 ```
 
 ### Differential abundance analysis between layers in old ponds
@@ -386,24 +392,24 @@ de.old.res.hypo_meta   <- results(de.old.dds, contrast = c("layer", "hypo", "met
 
 ```{r}
 plotMA.significant(de.old.res.epi_meta, cex = 0.6, main="DA analysis - MA plot: old ponds, epilimnion vs metalimnion")
-DESeq2datatable(de.old.res.epi_meta)
-DESeq2csv(de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
+#DESeq2datatable(de.old.res.epi_meta)
+DESeq2csv(de.old.res.epi_meta, file="results/DESeq2.old.epi_vs_meta.csv")
 ```
 
 #### Epilimnion vs hypolimnion
 
 ```{r, fig.height=8, fig.asp=1.9}
 plotMA.significant(de.old.res.epi_hypo, cex = 0.6, main="DA analysis - MA plot: old ponds, epilimnion vs hypolimnion")
-DESeq2datatable(de.old.res.epi_hypo)
-DESeq2csv(de.old.res.epi_hypo, file="DESeq2.old.epi_vs_hypo.csv")
+#DESeq2datatable(de.old.res.epi_hypo)
+DESeq2csv(de.old.res.epi_hypo, file="results/DESeq2.old.epi_vs_hypo.csv")
 ```
 
 #### Hypolimnion vs metalimnion
 
 ```{r}
 plotMA.significant(de.old.res.hypo_meta, cex = 0.6, main="DA analysis - MA plot: old ponds, hypolimnion vs metalimnion")
-DESeq2datatable(de.old.res.hypo_meta)
-DESeq2csv(de.old.res.hypo_meta, file="DESeq2.old.hypo_vs_meta.csv")
+#DESeq2datatable(de.old.res.hypo_meta)
+DESeq2csv(de.old.res.hypo_meta, file="results/DESeq2.old.hypo_vs_meta.csv")
 ```
 
 ### Differential abundance analysis between oxygen content in old ponds
@@ -462,8 +468,8 @@ de.oxy.old.res.oxic_anoxic    <- results(de.oxy.old.dds, contrast = c("oxygen_co
 
 ```{r}
 plotMA.significant(de.oxy.old.res.oxic_anoxic, cex = 0.6, main="DA analysis - MA plot: old ponds, oxic vs anoxic")
-DESeq2datatable(de.oxy.old.res.oxic_anoxic)
-DESeq2csv(de.oxy.old.res.oxic_anoxic, file="DESeq2.old.oxic_vs_anoxic.csv")
+#DESeq2datatable(de.oxy.old.res.oxic_anoxic)
+DESeq2csv(de.oxy.old.res.oxic_anoxic, file="results/DESeq2.old.oxic_vs_anoxic.csv")
 ```
 
 ## Mapping of reads on contigs from coassembly of all samples
@@ -471,73 +477,6 @@ DESeq2csv(de.oxy.old.res.oxic_anoxic, file="DESeq2.old.oxic_vs_anoxic.csv")
 Map reads on contigs from coassembly of all samples. Then we check mappings on genes which have at least one of the HMMs of interest. The idea is to consider as match a whole gene even if only a part of it has a match with a HMM profile. If a gene has more than one match in PFAM, counts will be averaged for all HMMs.
 
 ### Data preparation
-
-- CDS annotation file from Prodigal
-- Read hmmscan result table
-
-```{r, eval=FALSE}
-contigs.cds.annotation <- fread("grep -v '^#' prodigal/thawponds_assembly.cds.out",
-           sep = "\t",
-           #skip = "#",
-           stringsAsFactors = FALSE,
-           select = c(1,4,5,7),
-           col.names = c("contigID",
-                         "start",
-                         "end",
-                         "strand")) %>% group_by(contigID) %>% 
-                                     mutate(count = sequence(n())) %>%
-                                     mutate(CDS_ID = paste(contigID, count, sep = "_")) %>%
-                                     subset(select = -count) %>% ungroup()
-
-contigs.hmm.pfam <- fread("grep -v '^#' hmmer/split500000/thawponds_assembly.cds.split500000.all.hmmer_pfam.domtblout",
-           sep = " ",
-           stringsAsFactors = FALSE,
-           select = c(1,5,18,19),
-           col.names = c("CDS_ID",
-                         "PFAM_ID",
-                         "hit_start",
-                         "hit_end"))
-```
-
-Now we want to obtain a gff file with coordinates of hmmscan hits mapped onto the contigs.
-Conditionally join to hmmscan hits and extract relevant columns...
-
-```{r, eval=FALSE}
-c <- contigs.hmm.pfam %>%
-  left_join(contigs.cds.annotation) %>%
-  # start, end : annotations of CDS on the contig
-  # hit_start, hit_end : hmmscan result (on the translated CDS)
-  mutate(c_start=if_else(strand == "+", start+(hit_start-1)*3, end-hit_end*3+1)) %>%
-  mutate(c_end=if_else(strand == "+", start+hit_end*3, end-(hit_start-1)*3)) %>%
-  base::cbind(source=c("hmmer_3.2.1"), feature=c("Domain"), score=c("."), frame=c(".")) %>%
-  mutate(attribute=paste("PFAM_ID=", PFAM_ID, ";CDS_ID=", CDS_ID, sep="")) %>%
-  select(contigID,
-         source,
-         feature,
-         c_start,
-         c_end,
-         score,
-         strand,
-         frame,
-         attribute)
-
-d <- copy(c)
-d$c_start <- format(d$c_start, scientific = FALSE)
-d$c_end   <- format(d$c_end,   scientific = FALSE)
-
-write.table(d, 
-            sep="\t",
-            file="prodigal/thawponds_assembly.cds.hmmer_pfam.gff",
-            col.names = FALSE,
-            row.names = FALSE,
-            quote=FALSE)
-
-remove(d)
-```
-
-Export gff to cluster, count reads. 
-
-Count files
 
 ```{r}
 # get PFAM entry lengths so we will calculate tpm when parsing the table
@@ -558,7 +497,7 @@ big.table.pfam %>%
   spread(PFAM_ID, tpm) %>%
   t() %>%
   as.data.frame %>%
-  write.csv(file="bwebbwi.csv", quote=FALSE, col.names = FALSE)
+  write.csv(file="results/read_contigs_mapping_carbon_HMM.csv", quote=FALSE, col.names = FALSE)
 ```
 
 ### Differential abundance analysis
@@ -673,7 +612,7 @@ contigs.res.emerge_medium <- results(contigs.dds, contrast = c("age", "emerge", 
 # plot DE analysis results
 plotMA.significant(contigs.res.old_emerge, cex = 0.6, main="DE analysis - MA plot: epilimnion, old vs emerging")
 # show results in dynamic table
-contigs.res.old_emerge[rownames(contigs.res.old_emerge) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+#contigs.res.old_emerge[rownames(contigs.res.old_emerge) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
 # save results in csv file
 dir.create("results", showWarnings = FALSE)
 contigs.res.old_emerge[rownames(contigs.res.old_emerge) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.epi.old_vs_emerging.csv")
@@ -686,7 +625,7 @@ contigs.res.old_emerge[rownames(contigs.res.old_emerge) %in% carbohydrate_degrad
 # plot DE analysis results
 plotMA.significant(contigs.res.old_medium, cex = 0.6, main="DE analysis - MA plot: epilimnion, old vs medium")
 # show results in dynamic table
-contigs.res.old_medium[rownames(contigs.res.old_medium) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+#contigs.res.old_medium[rownames(contigs.res.old_medium) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
 # save results in csv file
 dir.create("results", showWarnings = FALSE)
 contigs.res.old_medium[rownames(contigs.res.old_medium) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.epi.old_vs_medium.csv")
@@ -703,7 +642,7 @@ contigs.res.old_medium[rownames(contigs.res.old_medium) %in% carbohydrate_degrad
 # plot DE analysis results
 plotMA.significant(contigs.res.emerge_medium, cex = 0.6, main="DE analysis - MA plot: epilimnion, emerging vs medium")
 # show results in dynamic table
-contigs.res.emerge_medium[rownames(contigs.res.emerge_medium) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+#contigs.res.emerge_medium[rownames(contigs.res.emerge_medium) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
 # save results in csv file
 contigs.res.emerge_medium[rownames(contigs.res.emerge_medium) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.epi.emerge_vs_medium.csv")
 
@@ -810,7 +749,7 @@ contigs.de.old.res.hypo_meta   <- results(contigs.de.old.dds, contrast = c("laye
 # plot DE analysis results
 plotMA.significant(contigs.de.old.res.epi_meta, cex = 0.6, main="DA analysis - MA plot: old ponds, epilimnion vs metalimnion")
 # show results in dynamic table
-contigs.de.old.res.epi_meta[rownames(contigs.de.old.res.epi_meta) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+#contigs.de.old.res.epi_meta[rownames(contigs.de.old.res.epi_meta) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
 # save results in csv file
 #DESeq2csv(contigs.de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
 contigs.de.old.res.epi_meta[rownames(contigs.de.old.res.epi_meta) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.old.epi_vs_meta.csv")
@@ -822,7 +761,7 @@ contigs.de.old.res.epi_meta[rownames(contigs.de.old.res.epi_meta) %in% carbohydr
 # plot DE analysis results
 plotMA.significant(contigs.de.old.res.epi_hypo, cex = 0.6, main="DA analysis - MA plot: old ponds, epilimnion vs hypolimnion")
 # show results in dynamic table
-contigs.de.old.res.epi_hypo[rownames(contigs.de.old.res.epi_hypo) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+#contigs.de.old.res.epi_hypo[rownames(contigs.de.old.res.epi_hypo) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
 # save results in csv file
 #DESeq2csv(contigs.de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
 contigs.de.old.res.epi_hypo[rownames(contigs.de.old.res.epi_hypo) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.old.epi_vs_hypo.csv")
@@ -838,7 +777,7 @@ contigs.de.old.res.epi_hypo[rownames(contigs.de.old.res.epi_hypo) %in% carbohydr
 # plot DE analysis results
 plotMA.significant(contigs.de.old.res.hypo_meta, cex = 0.6, main="DA analysis - MA plot: old ponds, hypolimnion vs metalimnion")
 # show results in dynamic table
-contigs.de.old.res.hypo_meta[rownames(contigs.de.old.res.hypo_meta) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+#contigs.de.old.res.hypo_meta[rownames(contigs.de.old.res.hypo_meta) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
 # save results in csv file
 #DESeq2csv(contigs.de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
 contigs.de.old.res.hypo_meta[rownames(contigs.de.old.res.hypo_meta) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.old.hypo_vs_meta.csv")
@@ -910,7 +849,7 @@ contigs.oxy.de.old.res <- results(contigs.oxy.de.old.dds, contrast = c("oxygen_c
 # plot DE analysis results
 plotMA.significant(contigs.oxy.de.old.res, cex = 0.6, main="DA analysis - MA plot: old ponds, oxic vs anoxic")
 # show results in dynamic table
-contigs.oxy.de.old.res[rownames(contigs.oxy.de.old.res) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+#contigs.oxy.de.old.res[rownames(contigs.oxy.de.old.res) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
 # save results in csv file
 #DESeq2csv(contigs.de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
 contigs.oxy.de.old.res[rownames(contigs.oxy.de.old.res) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.oxy.de.old.oxic_vs_anoxic.csv")
