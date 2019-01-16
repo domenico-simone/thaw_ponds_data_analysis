@@ -1,8 +1,12 @@
 # Carbon degradation in thaw ponds: data analysis
+
 <!-- TOC START min:2 max:3 link:true update:true -->
+- [Setup environment](#setup-environment)
+    - [Clone this repo](#clone-this-repo)
+    - [Download data](#download-data)
+    - [Install MetaDomain](#install-metadomain)
+    - [R packages](#r-packages)
 - [Parameters used in this protocol (edit this!)](#parameters-used-in-this-protocol-edit-this)
-- [Download data](#download-data)
-- [Install MetaDomain](#install-metadomain)
 - [Quality trimming](#quality-trimming)
 - [Co-assembly of all samples](#co-assembly-of-all-samples)
 - [Abundance of HMM families in read datasets](#abundance-of-hmm-families-in-read-datasets)
@@ -19,19 +23,19 @@
 
 Paper results have been produced with the commands in this document, with the exception of differential abundance analyses which have been done with the commands in the file <a href="thaw_ponds_pfam_reads.180919.md">thaw_ponds_pfam_reads.180919.md</a>.
 
-## Parameters used in this protocol (edit this!)
+## Setup environment
 
-**Run before anytime you run the protocol.**
+### Clone this repo
 
 ```bash
-export snicProj=
-export wdir=
-export PATH=${wdir}/scripts:$PATH
-export PATH=${wdir}/ext_utils/Metadomain:$PATH
+git clone https://github.com/domenico-simone/thaw_ponds_data_analysis.git
 ```
-## Download data
+
+### Download data
 
 ```bash
+export wdir=path/to/thaw_ponds_data_analysis
+
 cd $wdir
 mkdir -p data && cd data
 wget https://export.uppmax.uu.se/uppstore2018171/Pfam-A.hmm
@@ -49,7 +53,7 @@ wget https://export.uppmax.uu.se/uppstore2018171/splitSeqFile.py && chmod u+x sp
 cd ..
 ```
 
-## Install MetaDomain
+### Install MetaDomain
 
 ```bash
 cd $wdir
@@ -57,6 +61,30 @@ mkdir -p ext_utils && cd ext_utils
 
 curl -L https://sourceforge.net/projects/metadomain/files/MetaDomain.tar.gz/download > metadomain.tar.gz
 tar -xvzf metadomain.tar.gz && cd MetaDomain && make
+```
+
+### R packages
+
+This pipeline has been run with R 3.5.
+To run this pipeline, the following R packages are needed:
+
+- data.table
+- readr
+- stringr
+- tidyverse
+- vegan
+- DESeq2
+- DT
+
+## Parameters used in this protocol (edit this!)
+
+**Run before anytime you run the protocol.**
+
+```bash
+export snicProj=
+export wdir=path/to/thaw_ponds_data_analysis
+export PATH=${wdir}/scripts:$PATH
+export PATH=${wdir}/ext_utils/Metadomain:$PATH
 ```
 
 ## Quality trimming
