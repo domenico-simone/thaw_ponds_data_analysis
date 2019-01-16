@@ -37,8 +37,11 @@ mkdir -p data && cd data
 wget https://export.uppmax.uu.se/uppstore2018171/Pfam-A.hmm
 wget https://export.uppmax.uu.se/uppstore2018171/Pfam-A.hmm.dat.lengths
 wget https://export.uppmax.uu.se/uppstore2018171/carbohydrate_degradation_pfams_tveit.csv
-wget https://export.uppmax.uu.se/uppstore2018171/thaw_ponds_datasets.tar.gz
+# this will take a while...
+wget https://export.uppmax.uu.se/uppstore2018171/thaw_ponds_datasets.tar.gz && tar -xvzf thaw_ponds_datasets.tar.gz
 wget https://export.uppmax.uu.se/uppstore2018171/sampleList
+wget https://export.uppmax.uu.se/uppstore2018171/metadata.csv
+wget https://export.uppmax.uu.se/uppstore2018171/sample_name_reads
 cd ..
 
 mkdir -p scripts && cd scripts
@@ -361,3 +364,5 @@ cp *counts*out ${wdir}/counts
 EOF
 
 ```
+
+Downstream analyses are contained in file <a href="thaw_ponds_pfam_reads.180919.md">thaw_ponds_pfam_reads.180919.md</a>.
