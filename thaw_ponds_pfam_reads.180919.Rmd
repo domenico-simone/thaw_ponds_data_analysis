@@ -8,9 +8,9 @@ output:
     keep_md: true
     code_folding: hide
     toc: true
-    toc_float:
-      collapsed: false
-      smooth_scroll: true
+#    toc_float:
+#      collapsed: false
+#      smooth_scroll: true
 ---
 
 ```{r setup, include=FALSE}
@@ -217,7 +217,7 @@ rownames(all.final.matrix) <- rownames.all.final.matrix
 
 ### Overview of read mappings on PFAM HMMs of interest
 
-```{r, collapse=FALSE, include=TRUE, eval=FALSE}
+```{r, collapse=FALSE, include=TRUE}
 data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
   left_join(metadata.dataset_size) %>%
   mutate("total_mapped_reads (%)"=total_mapped_reads*100/total_reads) %>%
