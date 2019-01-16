@@ -217,7 +217,7 @@ rownames(all.final.matrix) <- rownames.all.final.matrix
 
 ### Overview of read mappings on PFAM HMMs of interest
 
-```{r, collapse=FALSE, include=TRUE}
+```{r, collapse=FALSE, include=TRUE, eval=FALSE}
 data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
   left_join(metadata.dataset_size) %>%
   mutate("total_mapped_reads (%)"=total_mapped_reads*100/total_reads) %>%
@@ -541,14 +541,14 @@ Count files
 
 ```{r}
 # get PFAM entry lengths so we will calculate tpm when parsing the table
-pfam.lengths <- read.table("Pfam-A.hmm.dat.lengths", header = TRUE, stringsAsFactors = FALSE) %>% 
+pfam.lengths <- read.table("data/Pfam-A.hmm.dat.lengths", header = TRUE, stringsAsFactors = FALSE) %>% 
                   mutate(PFAM_length_nt=PFAM_length*3)
 
 all_pfam_files = list.files('counts', pattern="*all*", full.names = TRUE)
 big.table.pfam <- data.frame(rbindlist(lapply(all_pfam_files, function(x) getBigTable.tpm.pfam(paste(x), pfam.lengths))))
 
 # Read table with PFAM of interest
-carbohydrate_degradation_pfams_tveit <- read_csv("carbohydrate_degradation_pfams_tveit.csv", 
+carbohydrate_degradation_pfams_tveit <- read_csv("data/carbohydrate_degradation_pfams_tveit.csv", 
                                                  col_names = FALSE, comment = "#", trim_ws = TRUE)
 
 # Extract relevant data and save to file
