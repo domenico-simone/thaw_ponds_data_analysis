@@ -17,8 +17,8 @@
 
 <!-- TOC END -->
 
-Paper results have been produced with the commands in this document, with the exception of differential abundance analyses which have been done with the commands in the Rmd file thaw_ponds_DA.Rmd.
- 
+Paper results have been produced with the commands in this document, with the exception of differential abundance analyses which have been done with the commands in the file <a href="thaw_ponds_pfam_reads.180919.md">thaw_ponds_pfam_reads.180919.md</a>.
+
 ## Parameters used in this protocol (edit this!)
 
 **Run before anytime you run the protocol.**
@@ -361,4 +361,3 @@ cp *counts*out ${wdir}/counts
 EOF
 
 ```
-
