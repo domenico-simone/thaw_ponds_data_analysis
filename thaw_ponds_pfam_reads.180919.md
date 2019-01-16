@@ -37,7 +37,7 @@ Data exploration was performed with the **metaMDS** function available through t
 
 ### Note on MA plots
 
-The MA-plot shows the log2 fold changes over the mean of normalized counts, i.e. the average of counts normalized by size factor. The x axis is the average abundance over all samples, the y axis the log2 fold change between the first condition and the second condition *eg* if an MA-plot shows epilimnion vs metalimnion, PFAM entries with a positive log2 fold change are more abundant in epilimnion samples, when compared to metalimnion samples. For each PFAM entry an adjusted p-value is calculated by the DA pipeline. PFAM entries with an adjusted p-value below a threshold (here 0.1, the suggested default) are shown in red. For each MA-plot, the related data table is reported in a searchable/filterable format, where the aforementioned adjusted p-value is reported in the last column. This table might turn useful for DA analyses returning several differentially abundant PFAM entries.
+The MA-plot shows the log2 fold changes over the mean of normalized counts, i.e. the average of counts normalized by size factor. The x axis is the average abundance over all samples, the y axis the log2 fold change between the first condition and the second condition *eg* if an MA-plot shows epilimnion vs metalimnion, PFAM entries with a positive log2 fold change are more abundant in epilimnion samples, when compared to metalimnion samples. For each PFAM entry an adjusted p-value is calculated by the DA pipeline. PFAM entries with an adjusted p-value below a threshold (here 0.1, the suggested default) are shown in red.
 
 ### Functions used in this report (click "Code" on the right to expand)
 
@@ -274,50 +274,51 @@ sample_dist.rarefied <- as.matrix((vegdist(all.final.matrix.rarefied, "bray")))
 
 # perform actual NMDS
 NMDS.rarefied <- metaMDS(sample_dist.rarefied)
-## Run 0 stress 0.09935875 
-## Run 1 stress 0.09964109 
-## ... Procrustes: rmse 0.009017233  max resid 0.03240856 
-## Run 2 stress 0.09964108 
-## ... Procrustes: rmse 0.00901012  max resid 0.03237125 
-## Run 3 stress 0.09935874 
+## Run 0 stress 0.09500502 
+## Run 1 stress 0.09500489 
 ## ... New best solution
-## ... Procrustes: rmse 8.99744e-06  max resid 2.339961e-05 
+## ... Procrustes: rmse 4.340237e-05  max resid 0.0001522408 
 ## ... Similar to previous best
-## Run 4 stress 0.1775011 
-## Run 5 stress 0.09964108 
-## ... Procrustes: rmse 0.009010256  max resid 0.03237458 
-## Run 6 stress 0.09935892 
-## ... Procrustes: rmse 5.382742e-05  max resid 0.0001290376 
-## ... Similar to previous best
-## Run 7 stress 0.09935874 
+## Run 2 stress 0.1568281 
+## Run 3 stress 0.09544104 
+## ... Procrustes: rmse 0.009140093  max resid 0.03351337 
+## Run 4 stress 0.1568281 
+## Run 5 stress 0.09500464 
 ## ... New best solution
-## ... Procrustes: rmse 2.128623e-05  max resid 9.470365e-05 
+## ... Procrustes: rmse 0.0001810496  max resid 0.0006587392 
 ## ... Similar to previous best
-## Run 8 stress 0.09935876 
-## ... Procrustes: rmse 2.343346e-05  max resid 7.968292e-05 
+## Run 6 stress 0.09544103 
+## ... Procrustes: rmse 0.009093355  max resid 0.03283895 
+## Run 7 stress 0.09500487 
+## ... Procrustes: rmse 0.0001756505  max resid 0.000631476 
 ## ... Similar to previous best
-## Run 9 stress 0.09964109 
-## ... Procrustes: rmse 0.009010457  max resid 0.03239222 
-## Run 10 stress 0.09964115 
-## ... Procrustes: rmse 0.009005518  max resid 0.03235422 
-## Run 11 stress 0.1773563 
-## Run 12 stress 0.0993589 
-## ... Procrustes: rmse 5.632766e-05  max resid 0.0001515326 
+## Run 8 stress 0.1568279 
+## Run 9 stress 0.09544104 
+## ... Procrustes: rmse 0.009100128  max resid 0.03283123 
+## Run 10 stress 0.09500491 
+## ... Procrustes: rmse 0.0001878948  max resid 0.0006830269 
 ## ... Similar to previous best
-## Run 13 stress 0.1598892 
-## Run 14 stress 0.09964108 
-## ... Procrustes: rmse 0.009014057  max resid 0.03238389 
-## Run 15 stress 0.09935874 
-## ... Procrustes: rmse 9.901433e-06  max resid 2.59477e-05 
+## Run 11 stress 0.09500472 
+## ... Procrustes: rmse 4.919333e-05  max resid 0.0001488835 
 ## ... Similar to previous best
-## Run 16 stress 0.1853049 
-## Run 17 stress 0.0996411 
-## ... Procrustes: rmse 0.009019555  max resid 0.03240714 
-## Run 18 stress 0.09964108 
-## ... Procrustes: rmse 0.009009163  max resid 0.03236165 
-## Run 19 stress 0.1598894 
-## Run 20 stress 0.09964108 
-## ... Procrustes: rmse 0.009010689  max resid 0.03237121 
+## Run 12 stress 0.09544106 
+## ... Procrustes: rmse 0.009083887  max resid 0.03280376 
+## Run 13 stress 0.09544102 
+## ... Procrustes: rmse 0.009080808  max resid 0.03280465 
+## Run 14 stress 0.09500475 
+## ... Procrustes: rmse 0.000122471  max resid 0.0004451003 
+## ... Similar to previous best
+## Run 15 stress 0.09500494 
+## ... Procrustes: rmse 0.0001945936  max resid 0.0007064302 
+## ... Similar to previous best
+## Run 16 stress 0.09544105 
+## ... Procrustes: rmse 0.009090031  max resid 0.03279123 
+## Run 17 stress 0.09500531 
+## ... Procrustes: rmse 0.0001766089  max resid 0.0006417528 
+## ... Similar to previous best
+## Run 18 stress 0.181301 
+## Run 19 stress 0.1724864 
+## Run 20 stress 0.1812979 
 ## *** Solution reached
 
 # build a data frame with NMDS coordinates and metadata
@@ -689,44 +690,49 @@ big.matrix.pfam.unique.rarefied.sample_dist.rarefied <- as.matrix((vegdist(big.m
 
 # perform actual NMDS
 big.matrix.pfam.unique.rarefied.NMDS.rarefied <- metaMDS(big.matrix.pfam.unique.rarefied.sample_dist.rarefied)
-## Run 0 stress 0.1047096 
-## Run 1 stress 0.1047096 
-## ... Procrustes: rmse 1.910793e-05  max resid 7.842583e-05 
-## ... Similar to previous best
-## Run 2 stress 0.1557867 
-## Run 3 stress 0.1046175 
+## Run 0 stress 0.1046947 
+## Run 1 stress 0.1046947 
 ## ... New best solution
-## ... Procrustes: rmse 0.004234519  max resid 0.01638131 
-## Run 4 stress 0.1363331 
-## Run 5 stress 0.1047097 
-## ... Procrustes: rmse 0.004234757  max resid 0.01639693 
-## Run 6 stress 0.1363331 
-## Run 7 stress 0.1046175 
+## ... Procrustes: rmse 1.732321e-05  max resid 5.440623e-05 
+## ... Similar to previous best
+## Run 2 stress 0.1847556 
+## Run 3 stress 0.1563153 
+## Run 4 stress 0.1805072 
+## Run 5 stress 0.1528827 
+## Run 6 stress 0.1519822 
+## Run 7 stress 0.2128681 
+## Run 8 stress 0.1046947 
 ## ... New best solution
-## ... Procrustes: rmse 3.685215e-05  max resid 0.000150285 
+## ... Procrustes: rmse 2.480306e-05  max resid 9.83908e-05 
 ## ... Similar to previous best
-## Run 8 stress 0.1671453 
-## Run 9 stress 0.1046175 
+## Run 9 stress 0.1363443 
+## Run 10 stress 0.1046947 
+## ... Procrustes: rmse 7.782514e-05  max resid 0.0003157389 
+## ... Similar to previous best
+## Run 11 stress 0.1364464 
+## Run 12 stress 0.1485275 
+## Run 13 stress 0.1046947 
 ## ... New best solution
-## ... Procrustes: rmse 1.042915e-05  max resid 4.527833e-05 
+## ... Procrustes: rmse 5.880395e-06  max resid 2.395109e-05 
 ## ... Similar to previous best
-## Run 10 stress 0.1516323 
-## Run 11 stress 0.1532672 
-## Run 12 stress 0.184428 
-## Run 13 stress 0.1557866 
-## Run 14 stress 0.1047098 
-## ... Procrustes: rmse 0.004234083  max resid 0.01639751 
-## Run 15 stress 0.1516325 
-## Run 16 stress 0.1047096 
-## ... Procrustes: rmse 0.004235413  max resid 0.01640073 
-## Run 17 stress 0.1047096 
-## ... Procrustes: rmse 0.004234447  max resid 0.01639394 
-## Run 18 stress 0.1046175 
-## ... Procrustes: rmse 5.127645e-06  max resid 1.791206e-05 
+## Run 14 stress 0.1046947 
+## ... Procrustes: rmse 3.766001e-05  max resid 0.0001619211 
 ## ... Similar to previous best
-## Run 19 stress 0.1690952 
-## Run 20 stress 0.1415261 
-## *** Solution reached
+## Run 15 stress 0.1046947 
+## ... New best solution
+## ... Procrustes: rmse 2.423167e-06  max resid 8.124879e-06 
+## ... Similar to previous best
+## Run 16 stress 0.1044759 
+## ... New best solution
+## ... Procrustes: rmse 0.004714907  max resid 0.01963029 
+## Run 17 stress 0.152018 
+## Run 18 stress 0.1046947 
+## ... Procrustes: rmse 0.004715333  max resid 0.01964369 
+## Run 19 stress 0.1046947 
+## ... Procrustes: rmse 0.004714975  max resid 0.01964291 
+## Run 20 stress 0.1485533 
+## *** No convergence -- monoMDS stopping criteria:
+##     20: stress ratio > sratmax
 
 # build a data frame with NMDS coordinates and metadata
 big.matrix.pfam.unique.rarefied.NMDS.rarefied.df = data.frame(MDS1 = big.matrix.pfam.unique.rarefied.NMDS.rarefied$points[,1],
