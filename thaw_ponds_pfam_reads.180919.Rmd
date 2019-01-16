@@ -1,0 +1,917 @@
+---
+title: "Thaw ponds: differential abundance analysis for genes involved in carbon degradation"
+author: "Domenico Simone"
+date: "November 1st, 2018"
+#output: html_document
+output:
+  html_document:
+    keep_md: true
+    code_folding: hide
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, collapse = TRUE, fig.path = "Rmd_figs/Rmd-")
+library(data.table)
+library(readr)
+library(stringr)
+library(tidyverse)
+library(vegan)
+library(DESeq2)
+library(DT)
+```
+
+## Summary
+
+Differential abundance analysis of genes involved in carbon degradation in samples from thaw ponds, according to:
+
+- Ages in epilimnion samples
+- Layers in old ponds
+- Oxygen content in old ponds.
+
+The analyses were performed with two different strategies:
+
+- Quantifying reads directly mapping on PFAM entries of interest;
+- Quantifying reads mapping on genes annotated on contigs from a coassembly of all read datasets.
+
+## Methods in brief
+
+Raw reads were trimmed with **sickle**v1.210 (default parameters) and mapped on Pfam HMMs of interest with **metadomain**. Read datasets were splitted in subsets of 500K reads for this analysis and the results combined in this protocol. 
+Contigs co-assembled from all read datasets were annotated against PFAM using **hmmer**. Read datasets were mapped against the contigs with **bowtie2**. Reads mapping on annotated PFAM entries were counted with **htseq-count**. 
+Two separate data exploration and DA analysis were performed, by using read mappings on PFAM entries of interest and read mappings on contigs assembled from metagenomic datasets.
+Data exploration was performed with the **metaMDS** function available through the R **vegan** package, to perform NMDS to compare the distribution of PFAM entries of interest in the analysed samples. Differential abundance (DA) analysis was performed with R package **DESeq2**. DA analyses were carried out by performing pairwise comparisons of tested multiple conditions, namely *old*, *emerge*, *medium* within epilimnion samples, and *epilimnion*, *metalimnion* and *hypolimnion* within old samples. An additional DA analysis was performed considering altogether *epilimnion* and *metalimnion* as *oxic* samples, compared to *hypolimnion* samples which were considered as *anoxic* samples. For each DA analysis, two outputs are shown: 1) MA-plot (described in the next section) and 2) a searchable/filterable table with DA results reported for each PFAM entry. Each table is also exported as csv file.
+
+### Note on MA plots
+
+The MA-plot shows the log2 fold changes over the mean of normalized counts, i.e. the average of counts normalized by size factor. The x axis is the average abundance over all samples, the y axis the log2 fold change between the first condition and the second condition *eg* if an MA-plot shows epilimnion vs metalimnion, PFAM entries with a positive log2 fold change are more abundant in epilimnion samples, when compared to metalimnion samples. For each PFAM entry an adjusted p-value is calculated by the DA pipeline. PFAM entries with an adjusted p-value below a threshold (here 0.1, the suggested default) are shown in red. For each MA-plot, the related data table is reported in a searchable/filterable format, where the aforementioned adjusted p-value is reported in the last column. This table might turn useful for DA analyses returning several differentially abundant PFAM entries.
+
+### Functions used in this report (click "Code" on the right to expand)
+
+```{r}
+# code to read all metadomain results
+getBigTable <- function(i){
+  small.table <- read.table(i, header = FALSE, stringsAsFactors = FALSE)
+  colnames(small.table) <- c("PFAM_ID", "PFAM_length", "n_reads", "PFAM_cov", "PFAM_status")
+  # i is eg ../metadomain_1M/A-1_S21_L005.0.1.fasta.metadomain
+  sample_name <- strsplit(basename(i), "_")[[1]][1]
+  p <- data.frame(sample=c(sample_name), stringsAsFactors = FALSE)
+  small.table <- cbind(p, small.table)
+}
+
+getBigTable.general <- function(i, ColNames=NULL){
+  small.table <- read.table(i, header = FALSE, stringsAsFactors = FALSE)
+  colnames(small.table) <- ColNames
+  sample_name <- strsplit(basename(i), "_")[[1]][1]
+  p <- data.frame(sample=c(sample_name), stringsAsFactors = FALSE)
+  small.table <- cbind(p, small.table)
+}
+
+# Calculate TPM for each PFAM in each sample
+#calculate.RPK <- function(table.counts, sample, n_reads, feature.length){
+calculate.RPK <- function(table.counts, sample, feature.name, pfam.data){
+  RPK <- table.counts %>%
+            base::subset(sample == sample)
+  return(RPK)
+}
+
+# this is for read counts from mapping on contigs which were annotated against PFAM
+getBigTable.tpm.pfam <- function(i, pfam.lengths.nt){
+  small.table <- read.table(i, header = FALSE, stringsAsFactors = FALSE, col.names = c("PFAM_ID", "n_reads")) %>%
+    filter(!base::grepl("^_", PFAM_ID)) %>%
+    mutate_at("PFAM_ID", str_trunc, width=7, ellipsis="") %>%
+#strsplit(pfam.lengths$PFAM_ID, split = "\\.") %>% unlist %>% matrix(ncol = 2, byrow = TRUE) %>% as.data.frame %>% .$V1
+    left_join(pfam.lengths, by = c("PFAM_ID" = "PFAM_ID.noversion")) %>%
+    select(-c(PFAM_ID.y, PFAM_length)) %>%
+    mutate(tpm=n_reads/PFAM_length_nt/sum(n_reads/PFAM_length_nt)*1e06)
+    #big.table.pfam[base::grep("^_", big.table.pfam$PFAM_ID, invert=TRUE),]
+  #colnames(small.table) <- c("PFAM_ID", "n_reads")
+  # i is eg ../metadomain_1M/A-1_S21_L005.0.1.fasta.metadomain
+  sample_name <- strsplit(basename(i), "_")[[1]][1]
+  p <- data.frame(sample=c(sample_name), stringsAsFactors = FALSE)
+  small.table <- cbind(p, small.table)
+}
+
+plotMA.significant <- function(df, t=0.1, cex=0.8, main="DE analysis - MA plot"){
+  plotMA(df, main=main)
+  xx <- df$baseMean
+  yy <- df$log2FoldChange
+  # Replace NAs in padj with values that you'll never want to consider :-)
+  signSubset <- replace(df$padj, is.na(df$padj), 1000) < t
+  if(count(signSubset, TRUE) > 0)
+    text( xx[signSubset],
+          yy[signSubset],
+          labels=rownames(df)[signSubset],
+          pos=1, cex=cex)
+    text( xx[c(TRUE)],
+          yy[c(TRUE)],
+          labels=c(""))
+}
+# # pointLabel(x, y, as.character(round(x,5)), offset = 0, cex = .7)
+# 
+# plotMA.significant.pointlabel <- function(df, t=0.1, cex=0.8, main="DE analysis - MA plot"){
+#   plotMA(df, main=main)
+#   xx <- df$baseMean
+#   yy <- df$log2FoldChange
+#   # Replace NAs in padj with values that you'll never want to consider :-)
+#   signSubset <- replace(df$padj, is.na(df$padj), 1000) < t
+#   if(count(signSubset, TRUE) > 0)
+#     pointLabel(xx[signSubset],
+#                yy[signSubset],
+#                labels=rownames(df)[signSubset],
+#                pos=1, cex=cex)
+#     # text( xx[signSubset],
+#     #       yy[signSubset],
+#     #       labels=rownames(df)[signSubset],
+#     #       pos=1, cex=cex)
+#     text( xx[c(TRUE)],
+#           yy[c(TRUE)],
+#           labels=c(""))
+# }
+# 
+# plotMA.significant.thigmo <- function(df, t=0.1, cex=0.8, main="DE analysis - MA plot"){
+#   plotMA(df, main=main)
+#   xx <- df$baseMean
+#   yy <- df$log2FoldChange
+#   # Replace NAs in padj with values that you'll never want to consider :-)
+#   signSubset <- replace(df$padj, is.na(df$padj), 1000) < t
+#   if(count(signSubset, TRUE) > 0)
+#     thigmophobe.labels(xx[signSubset],
+#                yy[signSubset],
+#                labels=rownames(df)[signSubset],
+#                cex=cex)
+#     # pointLabel(xx[signSubset],
+#     #            yy[signSubset],
+#     #            labels=rownames(df)[signSubset],
+#     #            pos=1, cex=cex)
+#     # text( xx[signSubset],
+#     #       yy[signSubset],
+#     #       labels=rownames(df)[signSubset],
+#     #       pos=1, cex=cex)
+#     text( xx[c(TRUE)],
+#           yy[c(TRUE)],
+#           labels=c(""))
+# }
+
+# since the DESeq2 table has PFAM ids as rownames,
+# we need to extract the PFAM ids and add them to the dataframe
+# as the first column
+DESeq2datatable <- function(DESeq2.data){
+  DESeq2.data <- DESeq2.data[which(DESeq2.data$padj < 0.1),]
+  datatable(data.frame(cbind(data.frame(PFAM_ID=row.names(DESeq2.data)), DESeq2.data)), rownames = FALSE, filter = "top")
+}
+
+# function to write out table DESeq2 table in csv format
+DESeq2csv <- function(DESeq2.data, file="DESeq2_data.csv"){
+  DESeq2.data <- DESeq2.data[which(DESeq2.data$padj < 0.1),]
+  write.table(data.frame(cbind(data.frame(PFAM_ID=row.names(DESeq2.data)), DESeq2.data)), row.names = FALSE, file=file, sep = ",")
+}
+```
+
+## Mapping of reads on HMM profiles
+
+### Data preparation
+
+```{r}
+
+# Read sample metadata and join it with table with dataset size:
+
+metadata <- read_csv("data/metadata.csv")
+metadata$sample_name <- gsub("_", "-", metadata$sample_code)
+colnames(metadata)[(names(metadata) == "size")] <- "age"
+rownames(metadata) <- metadata$sample_name
+
+metadata.dataset_size <- read_csv("data/sample_name_reads")
+
+# add dataset sizes
+metadata <- metadata %>%
+  left_join(metadata.dataset_size)
+
+# For each sample, read all result files
+
+all_files = list.files("./metadomain_1M", full.names = TRUE)
+big.table <- data.frame(rbindlist(lapply(all_files, function(x) getBigTable(paste(x)))))
+big.table$n_reads <- as.integer(big.table$n_reads)
+big.table$PFAM_length <- as.integer(big.table$PFAM_length)
+big.table$PFAM_cov <- as.numeric(big.table$PFAM_cov)
+
+# Group counts by sample and PFAM_ID, **save it**.
+all.final.table <- big.table %>% 
+  group_by(sample, PFAM_ID, PFAM_length) %>%
+  summarise(sum(n_reads)) %>%
+  ungroup()
+
+colnames(all.final.table)[4] <- "read_count"
+
+# Convert count table in matrix
+all.final.matrix <- all.final.table %>%
+  subset(select = -PFAM_length) %>%
+  spread(PFAM_ID, read_count)
+
+rownames.all.final.matrix <- all.final.matrix$sample
+all.final.matrix <- data.matrix(subset(all.final.matrix, select = -sample)) 
+rownames(all.final.matrix) <- rownames.all.final.matrix
+```
+
+### Overview of read mappings on PFAM HMMs of interest
+
+```{r, collapse=FALSE, include=TRUE}
+data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
+  left_join(metadata.dataset_size) %>%
+  mutate("total_mapped_reads (%)"=total_mapped_reads*100/total_reads) %>%
+  datatable(rownames = FALSE, filter = "top", options = list(pageLength = 30))
+```
+
+### NMDS on normalized data
+
+Perform NMDS on normalized data. Data are normalized by rarefying to the sample with the lowest number of reads mapped on PFAM HMMs of interest and plotted with ggplot.
+
+```{r}
+# source: http://geoffreyzahn.com/nmds-example/
+min_depth = min(rowSums(all.final.matrix))
+
+# normalize data
+all.final.matrix.rarefied <- as.matrix(round(rrarefy(all.final.matrix, min_depth)))
+
+# calculate distance matrix
+sample_dist.rarefied <- as.matrix((vegdist(all.final.matrix.rarefied, "bray")))
+
+# perform actual NMDS
+NMDS.rarefied <- metaMDS(sample_dist.rarefied)
+
+# build a data frame with NMDS coordinates and metadata
+#MDS1 = NMDS$points[,1]
+#MDS2 = NMDS$points[,2]
+NMDS.rarefied.df = data.frame(MDS1 = NMDS.rarefied$points[,1],
+                              MDS2 = NMDS.rarefied$points[,2])
+NMDS.rarefied.df$sample_name <- rownames(NMDS.rarefied.df)
+NMDS.rarefied.df <- NMDS.rarefied.df %>%
+  left_join(metadata)
+
+# Plot with ggplot
+ggplot(NMDS.rarefied.df, aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
+ geom_point() +
+ geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
+ #stat_ellipse() +
+ theme_bw() +
+ labs(title = "NMDS of read mapping on PFAM entries\nrelated to carbon degradation (normalized)")
+```
+
+### Differential abundance analysis between ages in epilimnion samples
+
+Generate input data for DESeq2, then create a CountDataSet object.
+
+```{r}
+# count table
+de.epi.age.matrix <- metadata %>%
+  subset(layer == "epilimnion") %>%
+  inner_join(all.final.table, by = c("sample_name" = "sample")) %>%
+  subset(select = c(sample_name, PFAM_ID, read_count)) %>%
+  spread(PFAM_ID, read_count)
+
+colnames.de.epi.age.matrix <- de.epi.age.matrix$sample_name
+de.epi.age.matrix <- subset(de.epi.age.matrix, select = -sample_name) %>% t()
+colnames(de.epi.age.matrix) <- colnames.de.epi.age.matrix
+
+# metadata
+de.epi.age.design <- metadata %>%
+  subset(layer == "epilimnion") %>%
+  inner_join(all.final.table, by = c("sample_name" = "sample")) %>%
+  subset(select = c(sample_name, age)) %>%
+  distinct()
+
+de.epi.age.design <- de.epi.age.design[base::order(de.epi.age.design$sample_name),]
+
+rownames.de.epi.age.design <- de.epi.age.design$sample_name
+de.epi.age.design <- subset(de.epi.age.design, select = -sample_name)
+rownames(de.epi.age.design) <- rownames.de.epi.age.design
+
+# data need to be factor
+de.epi.age.design$age <- factor(de.epi.age.design$age)
+
+# Then create a CountDataSet object
+ddsFullCountTable <- DESeqDataSetFromMatrix(
+countData = de.epi.age.matrix,
+colData = de.epi.age.design,
+design = ~ age)
+```
+
+Run the DESeq2 pipeline and extract results for pairwise comparisons between ages
+
+```{r}
+dds <- DESeq(ddsFullCountTable)
+res <- results(dds)
+res.old_emerge    <- results(dds, contrast = c("age", "old", "emerge"))
+res.old_medium    <- results(dds, contrast = c("age", "old", "medium"))
+res.emerge_medium <- results(dds, contrast = c("age", "emerge", "medium"))
+```
+
+#### Old vs emerging
+
+```{r}
+plotMA.significant(res.old_emerge, cex = 0.6, main="DE analysis - MA plot: epilimnion, old vs emerging")
+DESeq2datatable(res.old_emerge)
+DESeq2csv(res.old_emerge, file="DESeq2.epi.old_vs_emerging.csv")
+```
+
+#### Old vs medium
+
+```{r}
+plotMA.significant(res.old_medium, cex = 0.6, main="DE analysis - MA plot: epilimnion, old vs medium")
+DESeq2datatable(res.old_medium)
+DESeq2csv(res.old_medium, file="DESeq2.epi.old_vs_medium.csv")
+```
+
+#### Emerging vs medium
+
+```{r}
+plotMA.significant(res.emerge_medium, cex = 0.6, main="DE analysis - MA plot: epilimnion, emerging vs medium")
+DESeq2datatable(res.emerge_medium)
+DESeq2csv(res.emerge_medium, file="DESeq2.epi.emerging_vs_medium.csv")
+```
+
+### Differential abundance analysis between layers in old ponds
+
+Generate input data for DESeq2.
+
+```{r}
+#### Generate input data for DESeq2:
+### count table
+de.old.matrix <- metadata %>%
+  subset(age == "old") %>%
+  inner_join(all.final.table, by = c("sample_name" = "sample")) %>%
+  subset(select = c(sample_name, PFAM_ID, read_count)) %>%
+  spread(PFAM_ID, read_count)
+
+colnames.de.old.matrix <- de.old.matrix$sample_name
+de.old.matrix <- subset(de.old.matrix, select = -sample_name) %>% t()
+colnames(de.old.matrix) <- colnames.de.old.matrix
+
+### metadata
+de.old.design <- metadata %>%
+  subset(age == "old") %>%
+  inner_join(all.final.table, by = c("sample_name" = "sample")) %>%
+  subset(select = c(sample_name, layer)) %>%
+  distinct()
+
+de.old.design <- de.old.design[base::order(de.old.design$sample_name),]
+
+rownames.de.old.design <- de.old.design$sample_name
+de.old.design <- subset(de.old.design, select = -sample_name)
+rownames(de.old.design) <- rownames.de.old.design
+
+# data need to be factor
+de.old.design$layer <- factor(de.old.design$layer)
+
+### Then create a CountDataSet object
+de.old.ddsFullCountTable <- DESeqDataSetFromMatrix(
+countData = de.old.matrix,
+colData = de.old.design,
+design = ~ layer)
+```
+
+Run the DESeq2 pipeline and extract results for pairwise comparisons between ages.
+
+```{r}
+de.old.dds <- DESeq(de.old.ddsFullCountTable)
+
+de.old.res.epi_meta    <- results(de.old.dds, contrast = c("layer", "epilimnion", "meta"))
+de.old.res.epi_hypo    <- results(de.old.dds, contrast = c("layer", "epilimnion", "hypo"))
+de.old.res.hypo_meta   <- results(de.old.dds, contrast = c("layer", "hypo", "meta"))
+```
+
+#### Epilimnion vs metalimnion
+
+```{r}
+plotMA.significant(de.old.res.epi_meta, cex = 0.6, main="DA analysis - MA plot: old ponds, epilimnion vs metalimnion")
+DESeq2datatable(de.old.res.epi_meta)
+DESeq2csv(de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
+```
+
+#### Epilimnion vs hypolimnion
+
+```{r, fig.height=8, fig.asp=1.9}
+plotMA.significant(de.old.res.epi_hypo, cex = 0.6, main="DA analysis - MA plot: old ponds, epilimnion vs hypolimnion")
+DESeq2datatable(de.old.res.epi_hypo)
+DESeq2csv(de.old.res.epi_hypo, file="DESeq2.old.epi_vs_hypo.csv")
+```
+
+#### Hypolimnion vs metalimnion
+
+```{r}
+plotMA.significant(de.old.res.hypo_meta, cex = 0.6, main="DA analysis - MA plot: old ponds, hypolimnion vs metalimnion")
+DESeq2datatable(de.old.res.hypo_meta)
+DESeq2csv(de.old.res.hypo_meta, file="DESeq2.old.hypo_vs_meta.csv")
+```
+
+### Differential abundance analysis between oxygen content in old ponds
+
+Generate input data for DESeq2.
+
+```{r}
+#### Generate input data for DESeq2:
+### count table
+# de.oxy.old.matrix <- metadata %>%
+#   #mutate(oxygen_content = ifelse(metadata$layer == "hypo", "anoxic", "oxic")) %>%
+#   subset(age == "old") %>%
+#   inner_join(all.final.table, by = c("sample_name" = "sample")) %>%
+#   subset(select = c(sample_name, PFAM_ID, read_count)) %>%
+#   spread(PFAM_ID, read_count)
+# 
+# colnames.de.oxy.old.matrix <- de.oxy.old.matrix$sample_name
+# de.oxy.old.matrix <- subset(de.oxy.old.matrix, select = -sample_name) %>% t()
+# colnames(de.oxy.old.matrix) <- colnames.de.oxy.old.matrix
+
+### metadata
+de.oxy.old.design <- metadata %>%
+  mutate(oxygen_content = ifelse(metadata$layer == "hypo", "anoxic", "oxic")) %>%
+  subset(age == "old") %>%
+  inner_join(all.final.table, by = c("sample_name" = "sample")) %>%
+  subset(select = c(sample_name, oxygen_content)) %>%
+  distinct()
+
+de.oxy.old.design <- de.oxy.old.design[base::order(de.oxy.old.design$sample_name),]
+
+rownames.de.oxy.old.design <- de.oxy.old.design$sample_name
+de.oxy.old.design <- subset(de.oxy.old.design, select = -sample_name)
+rownames(de.oxy.old.design) <- rownames.de.oxy.old.design
+
+# data need to be factor
+de.oxy.old.design$oxygen_content <- factor(de.oxy.old.design$oxygen_content)
+
+### Then create a CountDataSet object
+de.oxy.old.ddsFullCountTable <- DESeqDataSetFromMatrix(
+countData = de.old.matrix,
+colData = de.oxy.old.design,
+design = ~ oxygen_content)
+```
+
+Run the DESeq2 pipeline and extract results for pairwise comparisons between ages.
+
+```{r}
+de.oxy.old.dds <- DESeq(de.oxy.old.ddsFullCountTable)
+
+de.oxy.old.res.oxic_anoxic    <- results(de.oxy.old.dds, contrast = c("oxygen_content", "oxic", "anoxic"))
+# de.old.res.epi_hypo    <- results(de.old.dds, contrast = c("layer", "epilimnion", "hypo"))
+# de.old.res.hypo_meta   <- results(de.old.dds, contrast = c("layer", "hypo", "meta"))
+```
+
+#### Oxic vs anoxic
+
+```{r}
+plotMA.significant(de.oxy.old.res.oxic_anoxic, cex = 0.6, main="DA analysis - MA plot: old ponds, oxic vs anoxic")
+DESeq2datatable(de.oxy.old.res.oxic_anoxic)
+DESeq2csv(de.oxy.old.res.oxic_anoxic, file="DESeq2.old.oxic_vs_anoxic.csv")
+```
+
+## Mapping of reads on contigs from coassembly of all samples
+
+Map reads on contigs from coassembly of all samples. Then we check mappings on genes which have at least one of the HMMs of interest. The idea is to consider as match a whole gene even if only a part of it has a match with a HMM profile. If a gene has more than one match in PFAM, counts will be averaged for all HMMs.
+
+### Data preparation
+
+- CDS annotation file from Prodigal
+- Read hmmscan result table
+
+```{r, eval=FALSE}
+contigs.cds.annotation <- fread("grep -v '^#' prodigal/thawponds_assembly.cds.out",
+           sep = "\t",
+           #skip = "#",
+           stringsAsFactors = FALSE,
+           select = c(1,4,5,7),
+           col.names = c("contigID",
+                         "start",
+                         "end",
+                         "strand")) %>% group_by(contigID) %>% 
+                                     mutate(count = sequence(n())) %>%
+                                     mutate(CDS_ID = paste(contigID, count, sep = "_")) %>%
+                                     subset(select = -count) %>% ungroup()
+
+contigs.hmm.pfam <- fread("grep -v '^#' hmmer/split500000/thawponds_assembly.cds.split500000.all.hmmer_pfam.domtblout",
+           sep = " ",
+           stringsAsFactors = FALSE,
+           select = c(1,5,18,19),
+           col.names = c("CDS_ID",
+                         "PFAM_ID",
+                         "hit_start",
+                         "hit_end"))
+```
+
+Now we want to obtain a gff file with coordinates of hmmscan hits mapped onto the contigs.
+Conditionally join to hmmscan hits and extract relevant columns...
+
+```{r, eval=FALSE}
+c <- contigs.hmm.pfam %>%
+  left_join(contigs.cds.annotation) %>%
+  # start, end : annotations of CDS on the contig
+  # hit_start, hit_end : hmmscan result (on the translated CDS)
+  mutate(c_start=if_else(strand == "+", start+(hit_start-1)*3, end-hit_end*3+1)) %>%
+  mutate(c_end=if_else(strand == "+", start+hit_end*3, end-(hit_start-1)*3)) %>%
+  base::cbind(source=c("hmmer_3.2.1"), feature=c("Domain"), score=c("."), frame=c(".")) %>%
+  mutate(attribute=paste("PFAM_ID=", PFAM_ID, ";CDS_ID=", CDS_ID, sep="")) %>%
+  select(contigID,
+         source,
+         feature,
+         c_start,
+         c_end,
+         score,
+         strand,
+         frame,
+         attribute)
+
+d <- copy(c)
+d$c_start <- format(d$c_start, scientific = FALSE)
+d$c_end   <- format(d$c_end,   scientific = FALSE)
+
+write.table(d, 
+            sep="\t",
+            file="prodigal/thawponds_assembly.cds.hmmer_pfam.gff",
+            col.names = FALSE,
+            row.names = FALSE,
+            quote=FALSE)
+
+remove(d)
+```
+
+Export gff to cluster, count reads. 
+
+Count files
+
+```{r}
+# get PFAM entry lengths so we will calculate tpm when parsing the table
+pfam.lengths <- read.table("Pfam-A.hmm.dat.lengths", header = TRUE, stringsAsFactors = FALSE) %>% 
+                  mutate(PFAM_length_nt=PFAM_length*3)
+
+all_pfam_files = list.files('counts', pattern="*all*", full.names = TRUE)
+big.table.pfam <- data.frame(rbindlist(lapply(all_pfam_files, function(x) getBigTable.tpm.pfam(paste(x), pfam.lengths))))
+
+# Read table with PFAM of interest
+carbohydrate_degradation_pfams_tveit <- read_csv("carbohydrate_degradation_pfams_tveit.csv", 
+                                                 col_names = FALSE, comment = "#", trim_ws = TRUE)
+
+# Extract relevant data and save to file
+big.table.pfam %>%
+  select(-c(n_reads,PFAM_length_nt)) %>%
+  filter(PFAM_ID %in% carbohydrate_degradation_pfams_tveit$X3) %>%
+  spread(PFAM_ID, tpm) %>%
+  t() %>%
+  as.data.frame %>%
+  write.csv(file="bwebbwi.csv", quote=FALSE, col.names = FALSE)
+```
+
+### Differential abundance analysis
+
+```{r}
+all_pfam_files.unique = list.files('counts', pattern="*unique*", full.names = TRUE)
+big.matrix.pfam.unique <- data.frame(rbindlist(lapply(all_pfam_files.unique, function(x) getBigTable.general(paste(x), ColNames = c("PFAM_ID", "read_count"))))) %>%
+                            filter(!base::grepl("^_", PFAM_ID)) %>%
+                            mutate_at("PFAM_ID", str_trunc, width=7, ellipsis="") %>%
+                            filter(PFAM_ID %in% carbohydrate_degradation_pfams_tveit$X3) %>%
+                            spread(PFAM_ID, read_count)
+
+rownames.big.matrix.pfam.unique <- big.matrix.pfam.unique$sample
+big.matrix.pfam.unique <- data.matrix(subset(big.matrix.pfam.unique, select = -sample)) 
+rownames(big.matrix.pfam.unique) <- rownames.big.matrix.pfam.unique
+```
+
+### NMDS on normalized data
+
+Perform NMDS on normalized data. Data are normalized by rarefying to the sample with the lowest number of reads mapped on PFAM HMMs of interest and plotted with ggplot.
+
+```{r}
+# source: http://geoffreyzahn.com/nmds-example/
+#min_depth = min(rowSums(big.matrix.pfam.unique))
+
+# normalize data
+big.matrix.pfam.unique.rarefied <- as.matrix(round(rrarefy(big.matrix.pfam.unique, min(rowSums(big.matrix.pfam.unique)))))
+
+# calculate distance matrix
+big.matrix.pfam.unique.rarefied.sample_dist.rarefied <- as.matrix((vegdist(big.matrix.pfam.unique.rarefied, "bray")))
+
+# perform actual NMDS
+big.matrix.pfam.unique.rarefied.NMDS.rarefied <- metaMDS(big.matrix.pfam.unique.rarefied.sample_dist.rarefied)
+
+# build a data frame with NMDS coordinates and metadata
+big.matrix.pfam.unique.rarefied.NMDS.rarefied.df = data.frame(MDS1 = big.matrix.pfam.unique.rarefied.NMDS.rarefied$points[,1],
+                                                              MDS2 = big.matrix.pfam.unique.rarefied.NMDS.rarefied$points[,2])
+big.matrix.pfam.unique.rarefied.NMDS.rarefied.df$sample_name <- rownames(big.matrix.pfam.unique.rarefied.NMDS.rarefied.df)
+big.matrix.pfam.unique.rarefied.NMDS.rarefied.df <- big.matrix.pfam.unique.rarefied.NMDS.rarefied.df %>%
+                                                      left_join(metadata)
+
+# Plot with ggplot
+ggplot(big.matrix.pfam.unique.rarefied.NMDS.rarefied.df, aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
+ geom_point() +
+ geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
+ #stat_ellipse() +
+ theme_bw() +
+ labs(title = "NMDS of read mapping on PFAM entries annotated on contigs\nrelated to carbon degradation (normalized)")
+```
+
+### Differential abundance analysis between ages in epilimnion samples
+
+Generate input data for DESeq2, then create a CountDataSet object.
+
+```{r}
+# count table
+contigs.de.epi.age.matrix <- data.frame(rbindlist(lapply(all_pfam_files.unique, function(x) getBigTable.general(paste(x), ColNames = c("PFAM_ID", "read_count"))))) %>%
+                                    filter(!base::grepl("^_", PFAM_ID)) %>%
+                                    mutate_at("PFAM_ID", str_trunc, width=7, ellipsis="") %>%
+                                    #filter(PFAM_ID %in% carbohydrate_degradation_pfams_tveit$X3) %>%
+                                    inner_join(subset(metadata, layer == "epilimnion"), by = c("sample" = "sample_name")) %>%
+                                    subset(select = c(sample, PFAM_ID, read_count)) %>%
+                                    spread(PFAM_ID, read_count)
+
+# de.epi.age.matrix <- metadata %>%
+#   subset(layer == "epilimnion") %>%
+#   inner_join(all.final.table, by = c("sample_name" = "sample")) %>%
+#   subset(select = c(sample_name, PFAM_ID, read_count)) %>%
+#   spread(PFAM_ID, read_count)
+
+colnames.contigs.de.epi.age.matrix <- contigs.de.epi.age.matrix$sample
+contigs.de.epi.age.matrix <- subset(contigs.de.epi.age.matrix, select = -sample) %>% t()
+colnames(contigs.de.epi.age.matrix) <- colnames.contigs.de.epi.age.matrix
+
+# metadata
+contigs.de.epi.age.design <- metadata %>%
+  subset(layer == "epilimnion") %>%
+  inner_join(data.frame(rbindlist(lapply(all_pfam_files.unique, function(x) getBigTable.general(paste(x), ColNames = c("PFAM_ID", "read_count"))))),
+             by = c("sample_name" = "sample")) %>%
+  subset(select = c(sample_name, age)) %>%
+  distinct()
+
+contigs.de.epi.age.design <- contigs.de.epi.age.design[base::order(contigs.de.epi.age.design$sample_name),]
+
+rownames.contigs.de.epi.age.design <- contigs.de.epi.age.design$sample_name
+contigs.de.epi.age.design <- subset(contigs.de.epi.age.design, select = -sample_name)
+rownames(contigs.de.epi.age.design) <- rownames.contigs.de.epi.age.design
+
+# data need to be factor
+contigs.de.epi.age.design$age <- factor(contigs.de.epi.age.design$age)
+
+# Then create a CountDataSet object
+contigs.ddsFullCountTable <- DESeqDataSetFromMatrix(
+countData = contigs.de.epi.age.matrix,
+colData = contigs.de.epi.age.design,
+design = ~ age)
+```
+
+Run the DESeq2 pipeline and extract results for pairwise comparisons between ages
+
+```{r}
+contigs.dds <- DESeq(contigs.ddsFullCountTable)
+contigs.res <- results(contigs.dds)
+contigs.res.old_emerge    <- results(contigs.dds, contrast = c("age", "old", "emerge"))
+contigs.res.old_medium    <- results(contigs.dds, contrast = c("age", "old", "medium"))
+contigs.res.emerge_medium <- results(contigs.dds, contrast = c("age", "emerge", "medium"))
+```
+
+#### Old vs emerging
+
+```{r}
+# plot DE analysis results
+plotMA.significant(contigs.res.old_emerge, cex = 0.6, main="DE analysis - MA plot: epilimnion, old vs emerging")
+# show results in dynamic table
+contigs.res.old_emerge[rownames(contigs.res.old_emerge) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+# save results in csv file
+dir.create("results", showWarnings = FALSE)
+contigs.res.old_emerge[rownames(contigs.res.old_emerge) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.epi.old_vs_emerging.csv")
+#DESeq2csv(contigs.res.old_emerge[rownames(contigs.res.old_emerge) %in% carbohydrate_degradation_pfams_tveit$X3,], file="DESeq2.contigs.epi.old_vs_emerging.csv")
+```
+
+#### Old vs medium
+
+```{r}
+# plot DE analysis results
+plotMA.significant(contigs.res.old_medium, cex = 0.6, main="DE analysis - MA plot: epilimnion, old vs medium")
+# show results in dynamic table
+contigs.res.old_medium[rownames(contigs.res.old_medium) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+# save results in csv file
+dir.create("results", showWarnings = FALSE)
+contigs.res.old_medium[rownames(contigs.res.old_medium) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.epi.old_vs_medium.csv")
+#DESeq2csv(contigs.res.old_medium[rownames(contigs.res.old_medium) %in% carbohydrate_degradation_pfams_tveit$X3,], file="DESeq2.contigs.epi.old_vs_emerging.csv")
+
+#plotMA.significant(res.old_medium, cex = 0.6, main="DE analysis - MA plot: epilimnion, old vs medium")
+#DESeq2datatable(res.old_medium)
+#DESeq2csv(res.old_medium, file="DESeq2.epi.old_vs_medium.csv")
+```
+
+#### Emerging vs medium
+
+```{r}
+# plot DE analysis results
+plotMA.significant(contigs.res.emerge_medium, cex = 0.6, main="DE analysis - MA plot: epilimnion, emerging vs medium")
+# show results in dynamic table
+contigs.res.emerge_medium[rownames(contigs.res.emerge_medium) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+# save results in csv file
+contigs.res.emerge_medium[rownames(contigs.res.emerge_medium) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.epi.emerge_vs_medium.csv")
+
+# plotMA.significant(res.emerge_medium, cex = 0.6, main="DE analysis - MA plot: epilimnion, emerging vs medium")
+# DESeq2datatable(res.emerge_medium)
+# DESeq2csv(res.emerge_medium, file="DESeq2.epi.emerging_vs_medium.csv")
+```
+
+### Differential abundance analysis between layers in old ponds
+
+Generate input data for DESeq2.
+
+```{r}
+# #### Generate input data for DESeq2:
+# ### count table
+# de.old.matrix <- metadata %>%
+#   subset(age == "old") %>%
+#   inner_join(all.final.table, by = c("sample_name" = "sample")) %>%
+#   subset(select = c(sample_name, PFAM_ID, read_count)) %>%
+#   spread(PFAM_ID, read_count)
+# 
+# colnames.de.old.matrix <- de.old.matrix$sample_name
+# de.old.matrix <- subset(de.old.matrix, select = -sample_name) %>% t()
+# colnames(de.old.matrix) <- colnames.de.old.matrix
+# 
+# ### metadata
+# de.old.design <- metadata %>%
+#   subset(age == "old") %>%
+#   inner_join(all.final.table, by = c("sample_name" = "sample")) %>%
+#   subset(select = c(sample_name, layer)) %>%
+#   distinct()
+# 
+# de.old.design <- de.old.design[base::order(de.old.design$sample_name),]
+# 
+# rownames.de.old.design <- de.old.design$sample_name
+# de.old.design <- subset(de.old.design, select = -sample_name)
+# rownames(de.old.design) <- rownames.de.old.design
+# 
+# # data need to be factor
+# de.old.design$layer <- factor(de.old.design$layer)
+# 
+# ### Then create a CountDataSet object
+# de.old.ddsFullCountTable <- DESeqDataSetFromMatrix(
+# countData = de.old.matrix,
+# colData = de.old.design,
+# design = ~ layer)
+
+############################ STARTS HERE
+# count table
+contigs.de.old.matrix <- data.frame(rbindlist(lapply(all_pfam_files.unique, function(x) getBigTable.general(paste(x), ColNames = c("PFAM_ID", "read_count"))))) %>%
+                                    filter(!base::grepl("^_", PFAM_ID)) %>%
+                                    mutate_at("PFAM_ID", str_trunc, width=7, ellipsis="") %>%
+                                    inner_join(subset(metadata, age == "old"), by = c("sample" = "sample_name")) %>%
+                                    subset(select = c(sample, PFAM_ID, read_count)) %>%
+                                    spread(PFAM_ID, read_count)
+
+# de.epi.age.matrix <- metadata %>%
+#   subset(layer == "epilimnion") %>%
+#   inner_join(all.final.table, by = c("sample_name" = "sample")) %>%
+#   subset(select = c(sample_name, PFAM_ID, read_count)) %>%
+#   spread(PFAM_ID, read_count)
+
+colnames.contigs.de.old.matrix <- contigs.de.old.matrix$sample
+contigs.de.old.matrix <- subset(contigs.de.old.matrix, select = -sample) %>% t()
+colnames(contigs.de.old.matrix) <- colnames.contigs.de.old.matrix
+
+# metadata
+contigs.de.old.design <- metadata %>%
+  subset(age == "old") %>%
+  inner_join(data.frame(rbindlist(lapply(all_pfam_files.unique, function(x) getBigTable.general(paste(x), ColNames = c("PFAM_ID", "read_count"))))),
+             by = c("sample_name" = "sample")) %>%
+  subset(select = c(sample_name, layer)) %>%
+  distinct()
+
+contigs.de.old.design <- contigs.de.old.design[base::order(contigs.de.old.design$sample_name),]
+
+rownames.contigs.de.old.design <- contigs.de.old.design$sample_name
+contigs.de.old.design <- subset(contigs.de.old.design, select = -sample_name)
+rownames(contigs.de.old.design) <- rownames.contigs.de.old.design
+
+# data need to be factor
+contigs.de.old.design$layer <- factor(contigs.de.old.design$layer)
+
+# Then create a CountDataSet object
+contigs.de.old.ddsFullCountTable <- DESeqDataSetFromMatrix(
+countData = contigs.de.old.matrix,
+colData = contigs.de.old.design,
+design = ~ layer)
+```
+
+Run the DESeq2 pipeline and extract results for pairwise comparisons between ages.
+
+```{r}
+contigs.de.old.dds <- DESeq(contigs.de.old.ddsFullCountTable)
+
+contigs.de.old.res.epi_meta    <- results(contigs.de.old.dds, contrast = c("layer", "epilimnion", "meta"))
+contigs.de.old.res.epi_hypo    <- results(contigs.de.old.dds, contrast = c("layer", "epilimnion", "hypo"))
+contigs.de.old.res.hypo_meta   <- results(contigs.de.old.dds, contrast = c("layer", "hypo", "meta"))
+```
+
+#### Epilimnion vs metalimnion
+
+```{r}
+# plot DE analysis results
+plotMA.significant(contigs.de.old.res.epi_meta, cex = 0.6, main="DA analysis - MA plot: old ponds, epilimnion vs metalimnion")
+# show results in dynamic table
+contigs.de.old.res.epi_meta[rownames(contigs.de.old.res.epi_meta) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+# save results in csv file
+#DESeq2csv(contigs.de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
+contigs.de.old.res.epi_meta[rownames(contigs.de.old.res.epi_meta) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.old.epi_vs_meta.csv")
+```
+
+#### Epilimnion vs hypolimnion
+
+```{r, fig.height=8, fig.asp=1.9}
+# plot DE analysis results
+plotMA.significant(contigs.de.old.res.epi_hypo, cex = 0.6, main="DA analysis - MA plot: old ponds, epilimnion vs hypolimnion")
+# show results in dynamic table
+contigs.de.old.res.epi_hypo[rownames(contigs.de.old.res.epi_hypo) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+# save results in csv file
+#DESeq2csv(contigs.de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
+contigs.de.old.res.epi_hypo[rownames(contigs.de.old.res.epi_hypo) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.old.epi_vs_hypo.csv")
+
+# plotMA.significant(contigs.de.old.res.epi_hypo, cex = 0.6, main="DA analysis - MA plot: old ponds, epilimnion vs hypolimnion")
+# DESeq2datatable(contigs.de.old.res.epi_hypo)
+# DESeq2csv(contigs.de.old.res.epi_hypo, file="DESeq2.old.epi_vs_hypo.csv")
+```
+
+#### Hypolimnion vs metalimnion
+
+```{r}
+# plot DE analysis results
+plotMA.significant(contigs.de.old.res.hypo_meta, cex = 0.6, main="DA analysis - MA plot: old ponds, hypolimnion vs metalimnion")
+# show results in dynamic table
+contigs.de.old.res.hypo_meta[rownames(contigs.de.old.res.hypo_meta) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+# save results in csv file
+#DESeq2csv(contigs.de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
+contigs.de.old.res.hypo_meta[rownames(contigs.de.old.res.hypo_meta) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.old.hypo_vs_meta.csv")
+
+# plotMA.significant(de.old.res.hypo_meta, cex = 0.6, main="DA analysis - MA plot: old ponds, hypolimnion vs metalimnion")
+# DESeq2datatable(de.old.res.hypo_meta)
+# DESeq2csv(de.old.res.hypo_meta, file="DESeq2.old.hypo_vs_meta.csv")
+```
+
+### Differential abundance analysis between oxic and anoxic layers in old ponds
+
+**Epilimnion** and **metalimnion** can be considered as **oxic** layers, while **hypolimnion** can be considered **anoxic**, according to environmental parameters.
+
+Generate input data for DESeq2.
+
+```{r}
+############################ STARTS HERE
+### The matrix is already built in the previous analysis
+# count table
+# contigs.de.old.matrix <- data.frame(rbindlist(lapply(all_pfam_files.unique, function(x) getBigTable.general(paste(x), ColNames = c("PFAM_ID", "read_count"))))) %>%
+#                                     filter(!base::grepl("^_", PFAM_ID)) %>%
+#                                     mutate_at("PFAM_ID", str_trunc, width=7, ellipsis="") %>%
+#                                     inner_join(subset(metadata, age == "old"), by = c("sample" = "sample_name")) %>%
+#                                     subset(select = c(sample, PFAM_ID, read_count)) %>%
+#                                     spread(PFAM_ID, read_count)
+# 
+# colnames.contigs.de.old.matrix <- contigs.de.old.matrix$sample
+# contigs.de.old.matrix <- subset(contigs.de.old.matrix, select = -sample) %>% t()
+# colnames(contigs.de.old.matrix) <- colnames.contigs.de.old.matrix
+
+### METADATA
+# Generate additional column with "oxic" or "anoxic" status according to layer 
+# metadata
+contigs.oxy.de.old.design <- metadata %>%
+  mutate(oxygen_content = ifelse(metadata$layer == "hypo", "anoxic", "oxic")) %>%
+  subset(age == "old") %>%
+  inner_join(data.frame(rbindlist(lapply(all_pfam_files.unique, function(x) getBigTable.general(paste(x), ColNames = c("PFAM_ID", "read_count"))))),
+             by = c("sample_name" = "sample")) %>%
+  subset(select = c(sample_name, oxygen_content)) %>%
+  distinct()
+
+contigs.oxy.de.old.design <- contigs.oxy.de.old.design[base::order(contigs.oxy.de.old.design$sample_name),]
+
+rownames.contigs.oxy.de.old.design <- contigs.oxy.de.old.design$sample_name
+contigs.oxy.de.old.design <- subset(contigs.oxy.de.old.design, select = -sample_name)
+rownames(contigs.oxy.de.old.design) <- rownames.contigs.oxy.de.old.design
+
+# data need to be factor
+contigs.oxy.de.old.design$oxygen_content <- factor(contigs.oxy.de.old.design$oxygen_content)
+
+# Then create a CountDataSet object
+contigs.oxy.de.old.ddsFullCountTable <- DESeqDataSetFromMatrix(
+countData = contigs.de.old.matrix,
+colData = contigs.oxy.de.old.design,
+design = ~ oxygen_content)
+```
+
+Run the DESeq2 pipeline and extract results for pairwise comparisons between oxygen content.
+
+```{r}
+contigs.oxy.de.old.dds <- DESeq(contigs.oxy.de.old.ddsFullCountTable)
+
+contigs.oxy.de.old.res <- results(contigs.oxy.de.old.dds, contrast = c("oxygen_content", "oxic", "anoxic"))
+```
+
+#### Oxic vs anoxic
+
+```{r}
+# plot DE analysis results
+plotMA.significant(contigs.oxy.de.old.res, cex = 0.6, main="DA analysis - MA plot: old ponds, oxic vs anoxic")
+# show results in dynamic table
+contigs.oxy.de.old.res[rownames(contigs.oxy.de.old.res) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% DESeq2datatable()
+# save results in csv file
+#DESeq2csv(contigs.de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
+contigs.oxy.de.old.res[rownames(contigs.oxy.de.old.res) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.oxy.de.old.oxic_vs_anoxic.csv")
+```
