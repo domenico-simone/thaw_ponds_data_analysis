@@ -230,6 +230,11 @@ data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(a
   #datatable(rownames = FALSE, filter = "top", options = list(pageLength = 30))
 ```
 
+### Test 
+
+- testing if there is a difference in total abundance abundance of degradation related PFAMs in the oxic layer across the ponds representing different ages
+- testing if there is a difference in total abundance abundance of degradation related PFAMs in the oxic vs anoxic layer in the old ponds
+
 ### NMDS on normalized data
 
 Perform NMDS on normalized data. Data are normalized by rarefying to the sample with the lowest number of reads mapped on PFAM HMMs of interest and plotted with ggplot.
