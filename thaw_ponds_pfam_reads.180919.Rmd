@@ -22,6 +22,7 @@ library(tidyverse)
 library(vegan)
 library(DESeq2)
 library(DT)
+library(ggpubr)
 ```
 
 ## Summary
@@ -230,11 +231,6 @@ data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(a
   #datatable(rownames = FALSE, filter = "top", options = list(pageLength = 30))
 ```
 
-### Test 
-
-- testing if there is a difference in total abundance abundance of degradation related PFAMs in the oxic layer across the ponds representing different ages
-- testing if there is a difference in total abundance abundance of degradation related PFAMs in the oxic vs anoxic layer in the old ponds
-
 ### NMDS on normalized data
 
 Perform NMDS on normalized data. Data are normalized by rarefying to the sample with the lowest number of reads mapped on PFAM HMMs of interest and plotted with ggplot.
@@ -261,10 +257,22 @@ NMDS.rarefied.df$sample_name <- rownames(NMDS.rarefied.df)
 NMDS.rarefied.df <- NMDS.rarefied.df %>%
   left_join(metadata)
 
-# Plot with ggplot
-ggplot(NMDS.rarefied.df, aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
- geom_point() +
- geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
+# # Plot with ggplot
+# ggplot(NMDS.rarefied.df, aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
+#  geom_point() +
+#  geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
+#  #stat_ellipse() +
+#  theme_bw() +
+#  labs(title = "NMDS of read mapping on PFAM entries\nrelated to carbon degradation (normalized)")
+
+# Plot with ggplot (new version)
+NMDS.rarefied.df %>%
+  mutate(age = ordered(as.factor(ifelse(NMDS.rarefied.df$age=="old", "Mature", ifelse(NMDS.rarefied.df$age=="medium", "Developing", "Emerging"))), levels = c("Emerging", "Developing", "Mature"))) %>%
+  mutate(layer = ordered(as.factor(ifelse(NMDS.rarefied.df$layer=="epilimnion", "Epilimnion", ifelse(NMDS.rarefied.df$layer=="meta", "Metalimnion", "Hypolimnion"))), levels = c("Hypolimnion", "Metalimnion", "Epilimnion"))) %>%
+  ggplot(aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
+ geom_point(size = 3) +
+ scale_color_hue(l = 65, c = 100) +
+ #geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
  #stat_ellipse() +
  theme_bw() +
  labs(title = "NMDS of read mapping on PFAM entries\nrelated to carbon degradation (normalized)")
@@ -483,7 +491,7 @@ Map reads on contigs from coassembly of all samples. Then we check mappings on g
 
 ### Data preparation
 
-```{r}
+```{r, warning=FALSE}
 # get PFAM entry lengths so we will calculate tpm when parsing the table
 pfam.lengths <- read.table("data/Pfam-A.hmm.dat.lengths", header = TRUE, stringsAsFactors = FALSE) %>% 
                   mutate(PFAM_length_nt=PFAM_length*3)
@@ -545,12 +553,24 @@ big.matrix.pfam.unique.rarefied.NMDS.rarefied.df <- big.matrix.pfam.unique.raref
                                                       left_join(metadata)
 
 # Plot with ggplot
-ggplot(big.matrix.pfam.unique.rarefied.NMDS.rarefied.df, aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
- geom_point() +
- geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
+# ggplot(big.matrix.pfam.unique.rarefied.NMDS.rarefied.df, aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
+#  geom_point() +
+#  geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
+#  #stat_ellipse() +
+#  theme_bw() +
+#  labs(title = "NMDS of read mapping on PFAM entries annotated on contigs\nrelated to carbon degradation (normalized)")
+
+big.matrix.pfam.unique.rarefied.NMDS.rarefied.df %>%
+    mutate(age = ordered(as.factor(ifelse(NMDS.rarefied.df$age=="old", "Mature", ifelse(NMDS.rarefied.df$age=="medium", "Developing", "Emerging"))), levels = c("Emerging", "Developing", "Mature"))) %>%
+    mutate(layer = ordered(as.factor(ifelse(NMDS.rarefied.df$layer=="epilimnion", "Epilimnion", ifelse(NMDS.rarefied.df$layer=="meta", "Metalimnion", "Hypolimnion"))), levels = c("Hypolimnion", "Metalimnion", "Epilimnion"))) %>%
+    ggplot(aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
+ geom_point(size = 3) +
+ scale_color_hue(l = 65, c = 100) + 
+ #geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
  #stat_ellipse() +
  theme_bw() +
  labs(title = "NMDS of read mapping on PFAM entries annotated on contigs\nrelated to carbon degradation (normalized)")
+
 ```
 
 ### Differential abundance analysis between ages in epilimnion samples
@@ -859,3 +879,76 @@ plotMA.significant(contigs.oxy.de.old.res, cex = 0.6, main="DA analysis - MA plo
 #DESeq2csv(contigs.de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
 contigs.oxy.de.old.res[rownames(contigs.oxy.de.old.res) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.oxy.de.old.oxic_vs_anoxic.csv")
 ```
+
+## Statistical tests on abundance of carbon degradation related PFAMs 
+
+**Testing if there is a difference in total abundance abundance of degradation related PFAMs in the oxic layer across the ponds representing different ages**
+
+Perform a one-way ANOVA.
+
+```{r, warning=FALSE, message=FALSE, collapse=FALSE, include=TRUE}
+aov_carbon_PFAM_oxic_old <- data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
+  left_join(metadata.dataset_size) %>%
+  mutate("total_mapped_reads_percent"=total_mapped_reads*100/total_reads) %>%
+  left_join(metadata, by = ("sample_name")) %>%
+  subset(age == "old") %>%
+  subset(layer != "hypo") %>%
+  dplyr::select(age, total_mapped_reads_percent)
+
+aov_carbon_PFAM_oxic_medium <- data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
+  left_join(metadata.dataset_size) %>%
+  mutate("total_mapped_reads_percent"=total_mapped_reads*100/total_reads) %>%
+  left_join(metadata, by = ("sample_name")) %>%
+  subset(age == "medium") %>%
+  subset(layer != "hypo") %>%
+  dplyr::select(age, total_mapped_reads_percent)
+
+aov_carbon_PFAM_oxic_emerge <- data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
+  left_join(metadata.dataset_size) %>%
+  mutate("total_mapped_reads_percent"=total_mapped_reads*100/total_reads) %>%
+  left_join(metadata, by = ("sample_name")) %>%
+  subset(age == "emerge") %>%
+  subset(layer != "hypo") %>%
+  dplyr::select(age, total_mapped_reads_percent)
+
+aov.dataframe <- rbind(aov_carbon_PFAM_oxic_old, aov_carbon_PFAM_oxic_medium, aov_carbon_PFAM_oxic_emerge)
+aov.dataframe$age <- base::as.factor(aov.dataframe$age)
+
+#ggboxplot(aov.dataframe, x = "age", y = "total_mapped_reads_percent", color = "age")
+
+# ANOVA test with assumption of equal variances
+summary(aov(total_mapped_reads_percent ~ age, data = aov.dataframe))
+```
+
+One-way ANOVA didn't point out any significant difference, although the p-value is slighlty above the significance value (p-value = 0.0654).
+
+**Testing if there is a difference in total abundance abundance of degradation related PFAMs in the oxic vs anoxic layer in the old ponds**
+
+```{r, warning=FALSE, message=FALSE, collapse=FALSE, include=TRUE}
+carbon_PFAM_oxic_old <- data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
+  left_join(metadata.dataset_size) %>%
+  mutate("total_mapped_reads_percent"=total_mapped_reads*100/total_reads) %>%
+  left_join(metadata, by = ("sample_name")) %>%
+  subset(age == "old") %>%
+  subset(layer != "hypo") %>%
+  dplyr::select(total_mapped_reads_percent)
+
+carbon_PFAM_anoxic_old <- data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
+  left_join(metadata.dataset_size) %>%
+  mutate("total_mapped_reads_percent"=total_mapped_reads*100/total_reads) %>%
+  left_join(metadata, by = ("sample_name")) %>%
+  subset(age == "old") %>%
+  subset(layer == "hypo") %>%
+  dplyr::select(total_mapped_reads_percent)
+
+data.frame(oxygen_content="oxic", percent_read_mapped=carbon_PFAM_oxic_old$total_mapped_reads_percent) %>%
+  rbind(data.frame(oxygen_content="anoxic", percent_read_mapped=carbon_PFAM_anoxic_old$total_mapped_reads_percent)) %>%
+  ggboxplot(x="oxygen_content", y="percent_read_mapped", color="oxygen_content")
+
+t_test_old_oxic_vs_anoxic <- t.test(carbon_PFAM_oxic_old, carbon_PFAM_anoxic_old)
+
+t_test_old_oxic_vs_anoxic
+```
+
+Welch Two Sample t-test suggested a significant difference (p-value = 1.634-08).
+

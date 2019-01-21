@@ -184,8 +184,10 @@ metadata <- read_csv("data/metadata.csv")
 ##   rawdata = col_character(),
 ##   size = col_character(),
 ##   layer = col_character(),
-##   X24 = col_logical(),
-##   methanotrophs = col_logical(),
+##   NH4 = col_integer(),
+##   PO4 = col_integer(),
+##   X24 = col_character(),
+##   methanotrophs = col_character(),
 ##   sample = col_character()
 ## )
 ## See spec(...) for full column specifications.
@@ -198,7 +200,7 @@ metadata.dataset_size <- read_csv("data/sample_name_reads")
 ## Parsed with column specification:
 ## cols(
 ##   sample_name = col_character(),
-##   total_reads = col_double()
+##   total_reads = col_integer()
 ## )
 
 # add dataset sizes
@@ -274,51 +276,65 @@ sample_dist.rarefied <- as.matrix((vegdist(all.final.matrix.rarefied, "bray")))
 
 # perform actual NMDS
 NMDS.rarefied <- metaMDS(sample_dist.rarefied)
-## Run 0 stress 0.09500502 
-## Run 1 stress 0.09500489 
+## Run 0 stress 0.09887482 
+## Run 1 stress 0.1882314 
+## Run 2 stress 0.09887483 
+## ... Procrustes: rmse 4.149699e-05  max resid 0.0001221684 
+## ... Similar to previous best
+## Run 3 stress 0.09887482 
+## ... Procrustes: rmse 6.154622e-06  max resid 1.749881e-05 
+## ... Similar to previous best
+## Run 4 stress 0.09887482 
 ## ... New best solution
-## ... Procrustes: rmse 4.340237e-05  max resid 0.0001522408 
+## ... Procrustes: rmse 8.73508e-06  max resid 3.214115e-05 
 ## ... Similar to previous best
-## Run 2 stress 0.1568281 
-## Run 3 stress 0.09544104 
-## ... Procrustes: rmse 0.009140093  max resid 0.03351337 
-## Run 4 stress 0.1568281 
-## Run 5 stress 0.09500464 
+## Run 5 stress 0.09887528 
+## ... Procrustes: rmse 7.048768e-05  max resid 0.0002191241 
+## ... Similar to previous best
+## Run 6 stress 0.09887482 
+## ... Procrustes: rmse 1.697827e-05  max resid 5.084294e-05 
+## ... Similar to previous best
+## Run 7 stress 0.1586289 
+## Run 8 stress 0.09887482 
+## ... Procrustes: rmse 1.681319e-06  max resid 4.969649e-06 
+## ... Similar to previous best
+## Run 9 stress 0.09887482 
+## ... Procrustes: rmse 8.487312e-06  max resid 2.902382e-05 
+## ... Similar to previous best
+## Run 10 stress 0.09887482 
+## ... Procrustes: rmse 3.76365e-06  max resid 1.688253e-05 
+## ... Similar to previous best
+## Run 11 stress 0.09887482 
 ## ... New best solution
-## ... Procrustes: rmse 0.0001810496  max resid 0.0006587392 
+## ... Procrustes: rmse 1.635403e-06  max resid 5.186226e-06 
 ## ... Similar to previous best
-## Run 6 stress 0.09544103 
-## ... Procrustes: rmse 0.009093355  max resid 0.03283895 
-## Run 7 stress 0.09500487 
-## ... Procrustes: rmse 0.0001756505  max resid 0.000631476 
+## Run 12 stress 0.09887483 
+## ... Procrustes: rmse 3.100322e-05  max resid 0.000106676 
 ## ... Similar to previous best
-## Run 8 stress 0.1568279 
-## Run 9 stress 0.09544104 
-## ... Procrustes: rmse 0.009100128  max resid 0.03283123 
-## Run 10 stress 0.09500491 
-## ... Procrustes: rmse 0.0001878948  max resid 0.0006830269 
+## Run 13 stress 0.09887482 
+## ... Procrustes: rmse 2.993185e-06  max resid 7.932806e-06 
 ## ... Similar to previous best
-## Run 11 stress 0.09500472 
-## ... Procrustes: rmse 4.919333e-05  max resid 0.0001488835 
+## Run 14 stress 0.09887488 
+## ... Procrustes: rmse 8.190714e-05  max resid 0.0002684636 
 ## ... Similar to previous best
-## Run 12 stress 0.09544106 
-## ... Procrustes: rmse 0.009083887  max resid 0.03280376 
-## Run 13 stress 0.09544102 
-## ... Procrustes: rmse 0.009080808  max resid 0.03280465 
-## Run 14 stress 0.09500475 
-## ... Procrustes: rmse 0.000122471  max resid 0.0004451003 
+## Run 15 stress 0.09887482 
+## ... Procrustes: rmse 4.091593e-06  max resid 1.234773e-05 
 ## ... Similar to previous best
-## Run 15 stress 0.09500494 
-## ... Procrustes: rmse 0.0001945936  max resid 0.0007064302 
+## Run 16 stress 0.09887482 
+## ... Procrustes: rmse 2.291966e-05  max resid 8.326452e-05 
 ## ... Similar to previous best
-## Run 16 stress 0.09544105 
-## ... Procrustes: rmse 0.009090031  max resid 0.03279123 
-## Run 17 stress 0.09500531 
-## ... Procrustes: rmse 0.0001766089  max resid 0.0006417528 
+## Run 17 stress 0.09887482 
+## ... Procrustes: rmse 2.461911e-06  max resid 5.782753e-06 
 ## ... Similar to previous best
-## Run 18 stress 0.181301 
-## Run 19 stress 0.1724864 
-## Run 20 stress 0.1812979 
+## Run 18 stress 0.09887494 
+## ... Procrustes: rmse 0.0001085749  max resid 0.0003572379 
+## ... Similar to previous best
+## Run 19 stress 0.09887486 
+## ... Procrustes: rmse 5.529639e-05  max resid 0.0001721149 
+## ... Similar to previous best
+## Run 20 stress 0.09887486 
+## ... Procrustes: rmse 6.578666e-05  max resid 0.0002044114 
+## ... Similar to previous best
 ## *** Solution reached
 
 # build a data frame with NMDS coordinates and metadata
@@ -331,13 +347,26 @@ NMDS.rarefied.df <- NMDS.rarefied.df %>%
   left_join(metadata)
 ## Joining, by = "sample_name"
 
-# Plot with ggplot
-ggplot(NMDS.rarefied.df, aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
- geom_point() +
- geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
+# # Plot with ggplot
+# ggplot(NMDS.rarefied.df, aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
+#  geom_point() +
+#  geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
+#  #stat_ellipse() +
+#  theme_bw() +
+#  labs(title = "NMDS of read mapping on PFAM entries\nrelated to carbon degradation (normalized)")
+
+# Plot with ggplot (new version)
+NMDS.rarefied.df %>%
+  mutate(age = ordered(as.factor(ifelse(NMDS.rarefied.df$age=="old", "Mature", ifelse(NMDS.rarefied.df$age=="medium", "Developing", "Emerging"))), levels = c("Emerging", "Developing", "Mature"))) %>%
+  mutate(layer = ordered(as.factor(ifelse(NMDS.rarefied.df$layer=="epilimnion", "Epilimnion", ifelse(NMDS.rarefied.df$layer=="meta", "Metalimnion", "Hypolimnion"))), levels = c("Hypolimnion", "Metalimnion", "Epilimnion"))) %>%
+  ggplot(aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
+ geom_point(size = 3) +
+ scale_color_hue(l = 65, c = 100) +
+ #geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
  #stat_ellipse() +
  theme_bw() +
  labs(title = "NMDS of read mapping on PFAM entries\nrelated to carbon degradation (normalized)")
+## Warning: Using shapes for an ordinal variable is not advised
 ```
 
 ![](Rmd_figs/Rmd-unnamed-chunk-4-1.png)<!-- -->
@@ -653,8 +682,6 @@ big.table.pfam %>%
   t() %>%
   as.data.frame %>%
   write.csv(file="results/read_contigs_mapping_carbon_HMM.csv", quote=FALSE, col.names = FALSE)
-## Warning in write.csv(., file = "results/
-## read_contigs_mapping_carbon_HMM.csv", : attempt to set 'col.names' ignored
 ```
 
 ### Differential abundance analysis
@@ -690,49 +717,47 @@ big.matrix.pfam.unique.rarefied.sample_dist.rarefied <- as.matrix((vegdist(big.m
 
 # perform actual NMDS
 big.matrix.pfam.unique.rarefied.NMDS.rarefied <- metaMDS(big.matrix.pfam.unique.rarefied.sample_dist.rarefied)
-## Run 0 stress 0.1046947 
-## Run 1 stress 0.1046947 
+## Run 0 stress 0.1046963 
+## Run 1 stress 0.1422265 
+## Run 2 stress 0.1046963 
 ## ... New best solution
-## ... Procrustes: rmse 1.732321e-05  max resid 5.440623e-05 
+## ... Procrustes: rmse 8.767143e-06  max resid 3.4709e-05 
 ## ... Similar to previous best
-## Run 2 stress 0.1847556 
-## Run 3 stress 0.1563153 
-## Run 4 stress 0.1805072 
-## Run 5 stress 0.1528827 
-## Run 6 stress 0.1519822 
-## Run 7 stress 0.2128681 
-## Run 8 stress 0.1046947 
+## Run 3 stress 0.1849999 
+## Run 4 stress 0.1374446 
+## Run 5 stress 0.170844 
+## Run 6 stress 0.1046963 
+## ... Procrustes: rmse 5.873271e-06  max resid 1.331745e-05 
+## ... Similar to previous best
+## Run 7 stress 0.1046963 
+## ... Procrustes: rmse 3.050662e-06  max resid 1.122303e-05 
+## ... Similar to previous best
+## Run 8 stress 0.1046709 
 ## ... New best solution
-## ... Procrustes: rmse 2.480306e-05  max resid 9.83908e-05 
-## ... Similar to previous best
-## Run 9 stress 0.1363443 
-## Run 10 stress 0.1046947 
-## ... Procrustes: rmse 7.782514e-05  max resid 0.0003157389 
-## ... Similar to previous best
-## Run 11 stress 0.1364464 
-## Run 12 stress 0.1485275 
-## Run 13 stress 0.1046947 
+## ... Procrustes: rmse 0.004692634  max resid 0.01849141 
+## Run 9 stress 0.1046708 
 ## ... New best solution
-## ... Procrustes: rmse 5.880395e-06  max resid 2.395109e-05 
+## ... Procrustes: rmse 8.267654e-06  max resid 3.359155e-05 
 ## ... Similar to previous best
-## Run 14 stress 0.1046947 
-## ... Procrustes: rmse 3.766001e-05  max resid 0.0001619211 
+## Run 10 stress 0.1046709 
+## ... Procrustes: rmse 3.62784e-05  max resid 8.472414e-05 
 ## ... Similar to previous best
-## Run 15 stress 0.1046947 
-## ... New best solution
-## ... Procrustes: rmse 2.423167e-06  max resid 8.124879e-06 
+## Run 11 stress 0.1046963 
+## ... Procrustes: rmse 0.004694195  max resid 0.01849693 
+## Run 12 stress 0.1374446 
+## Run 13 stress 0.1678184 
+## Run 14 stress 0.1587945 
+## Run 15 stress 0.1046709 
+## ... Procrustes: rmse 7.291912e-05  max resid 0.0003215842 
 ## ... Similar to previous best
-## Run 16 stress 0.1044759 
-## ... New best solution
-## ... Procrustes: rmse 0.004714907  max resid 0.01963029 
-## Run 17 stress 0.152018 
-## Run 18 stress 0.1046947 
-## ... Procrustes: rmse 0.004715333  max resid 0.01964369 
-## Run 19 stress 0.1046947 
-## ... Procrustes: rmse 0.004714975  max resid 0.01964291 
-## Run 20 stress 0.1485533 
-## *** No convergence -- monoMDS stopping criteria:
-##     20: stress ratio > sratmax
+## Run 16 stress 0.1374446 
+## Run 17 stress 0.1374446 
+## Run 18 stress 0.1046964 
+## ... Procrustes: rmse 0.004696003  max resid 0.01849489 
+## Run 19 stress 0.1421272 
+## Run 20 stress 0.1046963 
+## ... Procrustes: rmse 0.004692808  max resid 0.01849935 
+## *** Solution reached
 
 # build a data frame with NMDS coordinates and metadata
 big.matrix.pfam.unique.rarefied.NMDS.rarefied.df = data.frame(MDS1 = big.matrix.pfam.unique.rarefied.NMDS.rarefied$points[,1],
@@ -743,12 +768,24 @@ big.matrix.pfam.unique.rarefied.NMDS.rarefied.df <- big.matrix.pfam.unique.raref
 ## Joining, by = "sample_name"
 
 # Plot with ggplot
-ggplot(big.matrix.pfam.unique.rarefied.NMDS.rarefied.df, aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
- geom_point() +
- geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
+# ggplot(big.matrix.pfam.unique.rarefied.NMDS.rarefied.df, aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
+#  geom_point() +
+#  geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
+#  #stat_ellipse() +
+#  theme_bw() +
+#  labs(title = "NMDS of read mapping on PFAM entries annotated on contigs\nrelated to carbon degradation (normalized)")
+
+big.matrix.pfam.unique.rarefied.NMDS.rarefied.df %>%
+    mutate(age = ordered(as.factor(ifelse(NMDS.rarefied.df$age=="old", "Mature", ifelse(NMDS.rarefied.df$age=="medium", "Developing", "Emerging"))), levels = c("Emerging", "Developing", "Mature"))) %>%
+    mutate(layer = ordered(as.factor(ifelse(NMDS.rarefied.df$layer=="epilimnion", "Epilimnion", ifelse(NMDS.rarefied.df$layer=="meta", "Metalimnion", "Hypolimnion"))), levels = c("Hypolimnion", "Metalimnion", "Epilimnion"))) %>%
+    ggplot(aes(x=MDS1, y=MDS2, col=age, shape=layer)) +
+ geom_point(size = 3) +
+ scale_color_hue(l = 65, c = 100) + 
+ #geom_text(aes(label=sample_name),hjust=-0.15,vjust=0, size=3) +
  #stat_ellipse() +
  theme_bw() +
  labs(title = "NMDS of read mapping on PFAM entries annotated on contigs\nrelated to carbon degradation (normalized)")
+## Warning: Using shapes for an ordinal variable is not advised
 ```
 
 ![](Rmd_figs/Rmd-unnamed-chunk-20-1.png)<!-- -->
@@ -1138,3 +1175,104 @@ plotMA.significant(contigs.oxy.de.old.res, cex = 0.6, main="DA analysis - MA plo
 #DESeq2csv(contigs.de.old.res.epi_meta, file="DESeq2.old.epi_vs_meta.csv")
 contigs.oxy.de.old.res[rownames(contigs.oxy.de.old.res) %in% carbohydrate_degradation_pfams_tveit$X3,] %>% write.csv(file="results/DESeq2.contigs.oxy.de.old.oxic_vs_anoxic.csv")
 ```
+
+## Statistical tests on abundance of carbon degradation related PFAMs 
+
+**Testing if there is a difference in total abundance abundance of degradation related PFAMs in the oxic layer across the ponds representing different ages**
+
+Perform a one-way ANOVA.
+
+
+```r
+aov_carbon_PFAM_oxic_old <- data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
+  left_join(metadata.dataset_size) %>%
+  mutate("total_mapped_reads_percent"=total_mapped_reads*100/total_reads) %>%
+  left_join(metadata, by = ("sample_name")) %>%
+  subset(age == "old") %>%
+  subset(layer != "hypo") %>%
+  dplyr::select(age, total_mapped_reads_percent)
+
+aov_carbon_PFAM_oxic_medium <- data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
+  left_join(metadata.dataset_size) %>%
+  mutate("total_mapped_reads_percent"=total_mapped_reads*100/total_reads) %>%
+  left_join(metadata, by = ("sample_name")) %>%
+  subset(age == "medium") %>%
+  subset(layer != "hypo") %>%
+  dplyr::select(age, total_mapped_reads_percent)
+
+aov_carbon_PFAM_oxic_emerge <- data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
+  left_join(metadata.dataset_size) %>%
+  mutate("total_mapped_reads_percent"=total_mapped_reads*100/total_reads) %>%
+  left_join(metadata, by = ("sample_name")) %>%
+  subset(age == "emerge") %>%
+  subset(layer != "hypo") %>%
+  dplyr::select(age, total_mapped_reads_percent)
+
+aov.dataframe <- rbind(aov_carbon_PFAM_oxic_old, aov_carbon_PFAM_oxic_medium, aov_carbon_PFAM_oxic_emerge)
+aov.dataframe$age <- base::as.factor(aov.dataframe$age)
+
+#ggboxplot(aov.dataframe, x = "age", y = "total_mapped_reads_percent", color = "age")
+
+# ANOVA test with assumption of equal variances
+summary(aov(total_mapped_reads_percent ~ age, data = aov.dataframe))
+```
+
+```
+##             Df   Sum Sq   Mean Sq F value Pr(>F)  
+## age          2 0.001207 0.0006037   3.289 0.0654 .
+## Residuals   15 0.002753 0.0001835                 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+One-way ANOVA didn't point out any significant difference, although the p-value is slighlty above the significance value (p-value = 0.0654).
+
+**Testing if there is a difference in total abundance abundance of degradation related PFAMs in the oxic vs anoxic layer in the old ponds**
+
+
+```r
+carbon_PFAM_oxic_old <- data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
+  left_join(metadata.dataset_size) %>%
+  mutate("total_mapped_reads_percent"=total_mapped_reads*100/total_reads) %>%
+  left_join(metadata, by = ("sample_name")) %>%
+  subset(age == "old") %>%
+  subset(layer != "hypo") %>%
+  dplyr::select(total_mapped_reads_percent)
+
+carbon_PFAM_anoxic_old <- data.frame(sample_name=row.names(all.final.matrix), total_mapped_reads=rowSums(all.final.matrix)) %>%
+  left_join(metadata.dataset_size) %>%
+  mutate("total_mapped_reads_percent"=total_mapped_reads*100/total_reads) %>%
+  left_join(metadata, by = ("sample_name")) %>%
+  subset(age == "old") %>%
+  subset(layer == "hypo") %>%
+  dplyr::select(total_mapped_reads_percent)
+
+data.frame(oxygen_content="oxic", percent_read_mapped=carbon_PFAM_oxic_old$total_mapped_reads_percent) %>%
+  rbind(data.frame(oxygen_content="anoxic", percent_read_mapped=carbon_PFAM_anoxic_old$total_mapped_reads_percent)) %>%
+  ggboxplot(x="oxygen_content", y="percent_read_mapped", color="oxygen_content")
+```
+
+![](Rmd_figs/Rmd-unnamed-chunk-35-1.png)<!-- -->
+
+```r
+t_test_old_oxic_vs_anoxic <- t.test(carbon_PFAM_oxic_old, carbon_PFAM_anoxic_old)
+
+t_test_old_oxic_vs_anoxic
+```
+
+```
+## 
+## 	Welch Two Sample t-test
+## 
+## data:  carbon_PFAM_oxic_old and carbon_PFAM_anoxic_old
+## t = -12.824, df = 12.376, p-value = 1.634e-08
+## alternative hypothesis: true difference in means is not equal to 0
+## 95 percent confidence interval:
+##  -0.03344556 -0.02375891
+## sample estimates:
+##  mean of x  mean of y 
+## 0.06608594 0.09468817
+```
+
+Welch Two Sample t-test suggested a significant difference (p-value = 1.634-08).
+
